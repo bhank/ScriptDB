@@ -80,7 +80,14 @@ namespace Elsasoft.ScriptDb
                     ds.TableOneFile = true;
                 if(arguments["ScriptAsCreate"] != null )
                     ds.ScriptAsCreate =  true;
-                
+                if (arguments["Permissions"] != null)
+                    ds.Permissions = true;
+                if (arguments["NoCollation"] != null)
+                    ds.NoCollation = true;
+                if (arguments["CreateOnly"] != null)
+                    ds.CreateOnly = false;
+                if (arguments["filename"] != null)
+                    ds.OutputFileName = arguments["filename"];
                 ds.GenerateScript(connStr, outputDirectory, scriptData, verbose);
             }
             catch (Exception e)
@@ -108,18 +115,25 @@ namespace Elsasoft.ScriptDb
 ScriptDb.exe 
     ConnectionString 
     OutputDirectory
-    ScriptData (true|false)
-    [Verbose (true|false)]
+    [-d]
+    [-v]
+    [-table:table1,table2] [-TableOneFile] 
+    [-view:view1,view2] 
+    [-sp:sp1,sp2] 
+    [-ScriptAsCreate] 
+    [-Permissions] 
+    [-NoCollation]
+    [-CreateOnly]
+    [-filename:<FileName> | -]
 
 ConnectionString is a connection string to the db you want to 
 generate scripts for.
 
 OutputDirectory is a directory where you want the output placed.
 
-ScriptData is a bool saying whether you want bcp files to be 
-scripted.
+-d to say that you want bcp files to be scripted.
 
-Verbose is a bool to say whether you want me to be chatty or not.
+-v to say whether you want me to be chatty or not.
 Default is true because I am friendly and outgoing.
 
 table - coma separated list of tables to script
@@ -134,9 +148,14 @@ sp - coma separated list of stored procedures to script
 ScriptAsCreate - if specified then stored procedures will be scripted
 as create instead of as alter statements
 
+CreateOnly - Do not generate DROP statements
+
+filename - speicfy output filename. If file exists - script will be appended to the end of the file
+           specify - to output to console
+
 Example: 
 
-ScriptDb.exe -con:server=(local);database=pubs;trusted_connection=yes -outDir:scripts [-d] [-v] [-table:table1,table2] [-TableOneFile] [-view:view1,view2] [-sp:sp1,sp2] [-ScriptAsCreate]
+ScriptDb.exe -con:server=(local);database=pubs;trusted_connection=yes -outDir:scripts -d -v -filename:-
 
 ");
         }

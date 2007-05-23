@@ -49,6 +49,8 @@ EXEC sys.sp_executesql N'CREATE PROCEDURE [{0}].[{1}] AS SELECT ''this is a stub
 GO
 ";
 
+        #region Private Variables
+
         private string[] _TableFilter = new string[0];
         private string[] _RulesFilter = new string[0];
         private string[] _DefaultsFilter = new string[0];
@@ -62,6 +64,12 @@ GO
 
         private bool _TableOneFile = false;
         private bool _ScriptAsCreate = false;
+        private bool _Permissions = false;
+        private bool _NoCollation = false;
+        private bool _CreateOnly = false;
+
+        private string _OutputFileName = null;
+        #endregion
 
         private bool FilterExists()
         {
@@ -89,6 +97,7 @@ GO
                 s.SetDefaultInitFields(typeof(Table), "IsSystemObject");
                 s.SetDefaultInitFields(typeof(View), "IsSystemObject", "IsEncrypted");
                 s.SetDefaultInitFields(typeof(UserDefinedFunction), "IsSystemObject", "IsEncrypted");
+
                 s.ConnectionContext.SqlExecutionModes = SqlExecutionModes.CaptureSql;
 
                 Database db = s.Databases[connection.Database];
@@ -98,6 +107,8 @@ GO
                 so.DriDefaults = true;
                 so.DriUniqueKeys = true;
                 so.Bindings = true;
+                so.Permissions = _Permissions;
+                so.NoCollation = _NoCollation;
 
                 ScriptTables(verbose, db, so, outputDirectory, scriptData);
                 ScriptDefaults(verbose, db, so, outputDirectory);
@@ -117,6 +128,8 @@ GO
                 }
             }
         }
+
+        #region Private Script Functions
 
         private void ScriptTables(bool verbose, Database db, ScriptingOptions so, string outputDirectory, bool scriptData)
         {
@@ -151,8 +164,11 @@ GO
                         using (StreamWriter sw = GetStreamWriter(FileName, false))
                         {
                             if (verbose) Console.WriteLine("Scripting {0}", table.Name);
-                            so.ScriptDrops = so.IncludeIfNotExists = true;
-                            WriteScript(table.Script(so), sw);
+                            if (!_CreateOnly)
+                            {
+                                so.ScriptDrops = so.IncludeIfNotExists = true;
+                                WriteScript(table.Script(so), sw);                                
+                            }
                             so.ScriptDrops = so.IncludeIfNotExists = false;
                             WriteScript(table.Script(so), sw);
                         }
@@ -172,8 +188,11 @@ GO
                                 using (StreamWriter sw = GetStreamWriter(FileName, _TableOneFile))
                                 {
                                     if (verbose) Console.WriteLine("Scripting {0}.{1}", table.Name, smo.Name);
-                                    so.ScriptDrops = so.IncludeIfNotExists = true;
-                                    WriteScript(smo.Script(so), sw);
+                                    if (!_CreateOnly)
+                                    {
+                                        so.ScriptDrops = so.IncludeIfNotExists = true;
+                                        WriteScript(smo.Script(so), sw);
+                                    }
                                     so.ScriptDrops = so.IncludeIfNotExists = false;
                                     WriteScript(smo.Script(so), sw);
                                 }
@@ -198,8 +217,11 @@ GO
                                 using (StreamWriter sw = GetStreamWriter(FileName, _TableOneFile))
                                 {
                                     if (verbose) Console.WriteLine("Scripting {0}.{1}", table.Name, smo.Name);
-                                    so.ScriptDrops = so.IncludeIfNotExists = true;
-                                    WriteScript(smo.Script(so), sw);
+                                    if (!_CreateOnly)
+                                    {
+                                        so.ScriptDrops = so.IncludeIfNotExists = true;
+                                        WriteScript(smo.Script(so), sw);
+                                    }
                                     so.ScriptDrops = so.IncludeIfNotExists = false;
                                     WriteScript(smo.Script(so), sw);
                                 }
@@ -219,7 +241,10 @@ GO
                             using (StreamWriter sw = GetStreamWriter(FileName, _TableOneFile))
                             {
                                 if (verbose) Console.WriteLine("Scripting {0}.{1}", table.Name, smo.Name);
-                                so.ScriptDrops = so.IncludeIfNotExists = true;
+                                if (!_CreateOnly)
+                                {
+                                    so.ScriptDrops = so.IncludeIfNotExists = true;
+                                }
                                 WriteScript(smo.Script(), sw);
                             }
                         }
@@ -293,42 +318,44 @@ GO
 
             foreach (SqlAssembly smo in db.Assemblies)
             {
-                using (StreamWriter sw = GetStreamWriter(Path.Combine(dropAssemblies, FixUpFileName(smo.Name) + ".DROP.sql"), false))
+                if (!_CreateOnly)
                 {
-                    if (verbose) Console.WriteLine("Scripting Drop {0}", smo.Name);
-                    so.ScriptDrops = so.IncludeIfNotExists = true;
-
-                    //
-                    // need to drop any objects that depend on 
-                    // this assembly before dropping the assembly!
-                    //
-                    foreach (UserDefinedFunction ss in db.UserDefinedFunctions)
+                    using (StreamWriter sw = GetStreamWriter(Path.Combine(dropAssemblies, FixUpFileName(smo.Name) + ".DROP.sql"), false))
                     {
-                        if (ss.AssemblyName == smo.Name)
-                        {
-                            WriteScript(ss.Script(so), sw);
-                        }
-                    }
+                        if (verbose) Console.WriteLine("Scripting Drop {0}", smo.Name);
+                        so.ScriptDrops = so.IncludeIfNotExists = true;
 
-                    foreach (StoredProcedure ss in db.StoredProcedures)
-                    {
-                        if (ss.AssemblyName == smo.Name)
+                        //
+                        // need to drop any objects that depend on 
+                        // this assembly before dropping the assembly!
+                        //
+                        foreach (UserDefinedFunction ss in db.UserDefinedFunctions)
                         {
-                            WriteScript(ss.Script(so), sw);
+                            if (ss.AssemblyName == smo.Name)
+                            {
+                                WriteScript(ss.Script(so), sw);
+                            }
                         }
-                    }
 
-                    foreach (UserDefinedType ss in db.UserDefinedTypes)
-                    {
-                        if (ss.AssemblyName == smo.Name)
+                        foreach (StoredProcedure ss in db.StoredProcedures)
                         {
-                            WriteScript(ss.Script(so), sw);
+                            if (ss.AssemblyName == smo.Name)
+                            {
+                                WriteScript(ss.Script(so), sw);
+                            }
                         }
-                    }
 
-                    WriteScript(smo.Script(so), sw);
+                        foreach (UserDefinedType ss in db.UserDefinedTypes)
+                        {
+                            if (ss.AssemblyName == smo.Name)
+                            {
+                                WriteScript(ss.Script(so), sw);
+                            }
+                        }
+
+                        WriteScript(smo.Script(so), sw);
+                    }
                 }
-
                 using (StreamWriter sw = GetStreamWriter(Path.Combine(assemblies, FixUpFileName(smo.Name) + ".sql"), false))
                 {
                     if (verbose) Console.WriteLine("Scripting {0}", smo.Name);
@@ -385,8 +412,11 @@ GO
                         using (StreamWriter sw = GetStreamWriter(Path.Combine(views, FixUpFileName(smo.Name) + ".sql"), false))
                         {
                             if (verbose) Console.WriteLine("Scripting {0}", smo.Name);
-                            so.ScriptDrops = so.IncludeIfNotExists = true;
-                            WriteScript(smo.Script(so), sw);
+                            if (!_CreateOnly)
+                            {
+                                so.ScriptDrops = so.IncludeIfNotExists = true;
+                                WriteScript(smo.Script(so), sw);
+                            }
                             so.ScriptDrops = so.IncludeIfNotExists = false;
                             WriteScript(smo.Script(so), sw);
                         }
@@ -417,8 +447,11 @@ GO
                         using (StreamWriter sw = GetStreamWriter(Path.Combine(udfs, FixUpFileName(smo.Name) + ".sql"), false))
                         {
                             if (verbose) Console.WriteLine("Scripting {0}", smo.Name);
-                            so.ScriptDrops = so.IncludeIfNotExists = true;
-                            WriteScript(smo.Script(so), sw);
+                            if (!_CreateOnly)
+                            {
+                                so.ScriptDrops = so.IncludeIfNotExists = true;
+                                WriteScript(smo.Script(so), sw);
+                            }
                             so.ScriptDrops = so.IncludeIfNotExists = false;
                             WriteScript(smo.Script(so), sw);
                         }
@@ -445,8 +478,11 @@ GO
                     using (StreamWriter sw = GetStreamWriter(Path.Combine(types, FixUpFileName(smo.Name) + ".sql"), false))
                     {
                         if (verbose) Console.WriteLine("Scripting {0}", smo.Name);
-                        so.ScriptDrops = so.IncludeIfNotExists = true;
-                        WriteScript(smo.Script(so), sw);
+                        if (!_CreateOnly)
+                        {
+                            so.ScriptDrops = so.IncludeIfNotExists = true;
+                            WriteScript(smo.Script(so), sw);
+                        }
                         so.ScriptDrops = so.IncludeIfNotExists = false;
                         WriteScript(smo.Script(so), sw);
                     }
@@ -468,8 +504,11 @@ GO
                     using (StreamWriter sw = GetStreamWriter(Path.Combine(types, FixUpFileName(smo.Name) + ".sql"), false))
                     {
                         if (verbose) Console.WriteLine("Scripting {0}", smo.Name);
-                        so.ScriptDrops = so.IncludeIfNotExists = true;
-                        WriteScript(smo.Script(so), sw);
+                        if (!_CreateOnly)
+                        {
+                            so.ScriptDrops = so.IncludeIfNotExists = true;
+                            WriteScript(smo.Script(so), sw);
+                        }
                         so.ScriptDrops = so.IncludeIfNotExists = false;
                         WriteScript(smo.Script(so), sw);
                     }
@@ -492,8 +531,11 @@ GO
                     using (StreamWriter sw = GetStreamWriter(Path.Combine(rules, FixUpFileName(smo.Name) + ".sql"), false))
                     {
                         if (verbose) Console.WriteLine("Scripting {0}", smo.Name);
-                        so.ScriptDrops = so.IncludeIfNotExists = true;
-                        WriteScript(smo.Script(so), sw);
+                        if (!_CreateOnly)
+                        {
+                            so.ScriptDrops = so.IncludeIfNotExists = true;
+                            WriteScript(smo.Script(so), sw);
+                        }
                         so.ScriptDrops = so.IncludeIfNotExists = false;
                         WriteScript(smo.Script(so), sw);
                     }
@@ -517,8 +559,11 @@ GO
                             GetStreamWriter(Path.Combine(defaults, FixUpFileName(smo.Name) + ".sql"), false))
                     {
                         if (verbose) Console.WriteLine("Scripting {0}", smo.Name);
-                        so.ScriptDrops = so.IncludeIfNotExists = true;
-                        WriteScript(smo.Script(so), sw);
+                        if (!_CreateOnly)
+                        {
+                            so.ScriptDrops = so.IncludeIfNotExists = true;
+                            WriteScript(smo.Script(so), sw);
+                        }
                         so.ScriptDrops = so.IncludeIfNotExists = false;
                         WriteScript(smo.Script(so), sw);
                     }
@@ -540,8 +585,11 @@ GO
                     using (StreamWriter sw = GetStreamWriter(Path.Combine(triggers, FixUpFileName(smo.Name) + ".sql"), false))
                     {
                         if (verbose) Console.WriteLine("Scripting {0}", smo.Name);
-                        so.ScriptDrops = so.IncludeIfNotExists = true;
-                        WriteScript(smo.Script(so), sw);
+                        if (!_CreateOnly)
+                        {
+                            so.ScriptDrops = so.IncludeIfNotExists = true;
+                            WriteScript(smo.Script(so), sw);
+                        }
                         so.ScriptDrops = so.IncludeIfNotExists = false;
                         WriteScript(smo.Script(so), sw);
                     }
@@ -576,14 +624,21 @@ GO
                     using (StreamWriter sw = GetStreamWriter(Path.Combine(schemas, FixUpFileName(smo.Name) + ".sql"), false))
                     {
                         if (verbose) Console.WriteLine("Scripting {0}", smo.Name);
-                        so.ScriptDrops = so.IncludeIfNotExists = true;
-                        WriteScript(smo.Script(so), sw);
+                        if (!_CreateOnly)
+                        {
+                            so.ScriptDrops = so.IncludeIfNotExists = true;
+                            WriteScript(smo.Script(so), sw);
+                        }
                         so.ScriptDrops = so.IncludeIfNotExists = false;
                         WriteScript(smo.Script(so), sw);
                     }
                 }
             }
         }
+
+        #endregion
+
+        #region Private Utility Functions
 
         private void WriteScript(StringCollection script, StreamWriter sw, string replaceMe, string replaceWith)
         {
@@ -681,12 +736,31 @@ GO
                 .Replace("`", ".")
                 .Replace("~", ".");
         }
+
+        /// <summary>
+        /// THIS FUNCTION HAS A SIDEEFFECT.
+        /// If OutputFileName is set, it will always open the filename
+        /// </summary>
+        /// <param name="Path"></param>
+        /// <param name="Append"></param>
+        /// <returns></returns>
         private StreamWriter GetStreamWriter(string Path, bool Append)
         {
+            if (_OutputFileName != null)
+            {
+                Path = OutputFileName;
+                Append = true;
+            }
+            if (OutputFileName == "-")
+                return new StreamWriter(System.Console.OpenStandardOutput());
+
             if (!Directory.Exists(System.IO.Path.GetDirectoryName(Path))) Directory.CreateDirectory(System.IO.Path.GetDirectoryName(Path));
             return new StreamWriter(Path, Append);
         }
+        
+        #endregion
 
+        #region Public Properties
 
         public string[] TableFilter
         {
@@ -759,5 +833,31 @@ GO
             get { return _ScriptAsCreate; }
             set { _ScriptAsCreate = value; }
         }
+
+        public bool Permissions
+        {
+            get { return _Permissions; }
+            set { _Permissions = value; }
+        }
+
+        public bool NoCollation
+        {
+            get { return _NoCollation; }
+            set { _NoCollation = value; }
+        }
+
+        public bool CreateOnly
+        {
+            get { return _CreateOnly; }
+            set { _CreateOnly = value; }
+        }
+
+        public string OutputFileName
+        {
+            get { return _OutputFileName; }
+            set { _OutputFileName = value; }
+        }
+
+        #endregion
     }
 }
