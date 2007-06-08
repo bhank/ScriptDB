@@ -44,13 +44,13 @@ namespace Elsasoft.ScriptDb
     {
 
         private const string createSprocStub = @"
-IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[{0}].[{1}]') AND type in (N'P', N'PC'))
-EXEC sys.sp_executesql N'CREATE PROCEDURE [{0}].[{1}] AS SELECT ''this is a stub.  replace me with real code please.'''
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE id = OBJECT_ID(N'[{0}].[{1}]') AND type in (N'P', N'PC'))
+EXEC sp_executesql N'CREATE PROCEDURE [{0}].[{1}] AS SELECT ''this is a stub.  replace me with real code please.'''
 GO
 ";
 
         #region Private Variables
-
+        
         private string[] _TableFilter = new string[0];
         private string[] _RulesFilter = new string[0];
         private string[] _DefaultsFilter = new string[0];
@@ -66,6 +66,7 @@ GO
         private bool _ScriptAsCreate = false;
         private bool _Permissions = false;
         private bool _NoCollation = false;
+        private bool _IncludeDatabase;
         private bool _CreateOnly = false;
 
         private string _OutputFileName = null;
@@ -97,7 +98,6 @@ GO
                 s.SetDefaultInitFields(typeof(Table), "IsSystemObject");
                 s.SetDefaultInitFields(typeof(View), "IsSystemObject", "IsEncrypted");
                 s.SetDefaultInitFields(typeof(UserDefinedFunction), "IsSystemObject", "IsEncrypted");
-
                 s.ConnectionContext.SqlExecutionModes = SqlExecutionModes.CaptureSql;
 
                 Database db = s.Databases[connection.Database];
@@ -109,6 +109,7 @@ GO
                 so.Bindings = true;
                 so.Permissions = _Permissions;
                 so.NoCollation = _NoCollation;
+                so.IncludeDatabaseContext = _IncludeDatabase;
 
                 ScriptTables(verbose, db, so, outputDirectory, scriptData);
                 ScriptDefaults(verbose, db, so, outputDirectory);
@@ -382,8 +383,12 @@ GO
                         using (StreamWriter sw = GetStreamWriter(Path.Combine(sprocs, FixUpFileName(smo.Name) + ".sql"), false))
                         {
                             if (verbose) Console.WriteLine("Scripting {0}", smo.Name);
+                            if (_ScriptAsCreate)
+                            {
+                                so.ScriptDrops = so.IncludeIfNotExists = true;
+                                WriteScript(smo.Script(so), sw);
+                            }
                             so.ScriptDrops = so.IncludeIfNotExists = false;
-                            sw.WriteLine(string.Format(createSprocStub, smo.Schema, smo.Name));
                             if (_ScriptAsCreate)
                                 WriteScript(smo.Script(so), sw);
                             else
@@ -857,7 +862,11 @@ GO
             get { return _OutputFileName; }
             set { _OutputFileName = value; }
         }
-
+        public bool IncludeDatabase
+        {
+            get { return _IncludeDatabase; }
+            set { _IncludeDatabase = value; }
+        }
         #endregion
     }
 }

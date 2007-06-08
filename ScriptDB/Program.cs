@@ -84,6 +84,8 @@ namespace Elsasoft.ScriptDb
                     ds.Permissions = true;
                 if (arguments["NoCollation"] != null)
                     ds.NoCollation = true;
+                if (arguments["IncludeDatabase"] != null)
+                    ds.IncludeDatabase = true;
                 if (arguments["CreateOnly"] != null)
                     ds.CreateOnly = false;
                 if (arguments["filename"] != null)
@@ -148,6 +150,8 @@ sp - coma separated list of stored procedures to script
 ScriptAsCreate - if specified then stored procedures will be scripted
 as create instead of as alter statements
 
+IncludeDatabase - Include Database Context in the script
+
 CreateOnly - Do not generate DROP statements
 
 filename - speicfy output filename. If file exists - script will be appended to the end of the file
@@ -155,7 +159,7 @@ filename - speicfy output filename. If file exists - script will be appended to 
 
 Example: 
 
-ScriptDb.exe -con:server=(local);database=pubs;trusted_connection=yes -outDir:scripts -d -v -filename:-
+ScriptDb.exe -con:server=(local);database=pubs;trusted_connection=yes -outDir:scripts [-d] [-v] [-table:table1,table2] [-TableOneFile] [-view:view1,view2] [-sp:sp1,sp2] [-ScriptAsCreate] [-Permissions] [-NoCollation] [-IncludeDatabase] -filename:-
 
 ");
         }
