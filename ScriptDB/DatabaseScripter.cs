@@ -68,6 +68,7 @@ GO
         private bool _NoCollation = false;
         private bool _IncludeDatabase;
         private bool _CreateOnly = false;
+        private bool _ScriptProperties = false;
 
         private string _OutputFileName = null;
         #endregion
@@ -86,9 +87,10 @@ GO
         /// <param name="connStr"></param>
         /// <param name="outputDirectory"></param>
         /// <param name="verbose"></param>
-        public void GenerateScript(string connStr, string outputDirectory, bool scriptData, bool verbose)
+        public void GenerateScript(string connStr, string outputDirectory, 
+                                   bool scriptData, bool verbose, bool scriptProperties)
         {
-            //            if (!Directory.Exists(outputDirectory)) Directory.CreateDirectory(outputDirectory);
+            this._ScriptProperties = scriptProperties;
 
             using (SqlConnection connection = new SqlConnection(connStr))
             {
@@ -172,6 +174,11 @@ GO
                             }
                             so.ScriptDrops = so.IncludeIfNotExists = false;
                             WriteScript(table.Script(so), sw);
+
+                            if (_ScriptProperties && table is IExtendedProperties)
+                            {
+                                ScriptProperties((IExtendedProperties)table, sw);
+                            }
                         }
 
                         #endregion
@@ -196,6 +203,11 @@ GO
                                     }
                                     so.ScriptDrops = so.IncludeIfNotExists = false;
                                     WriteScript(smo.Script(so), sw);
+
+                                    if (_ScriptProperties && smo is IExtendedProperties)
+                                    {
+                                        ScriptProperties((IExtendedProperties)smo, sw);
+                                    }
                                 }
                             }
                         }
@@ -225,6 +237,11 @@ GO
                                     }
                                     so.ScriptDrops = so.IncludeIfNotExists = false;
                                     WriteScript(smo.Script(so), sw);
+
+                                    if (_ScriptProperties && smo is IExtendedProperties)
+                                    {
+                                        ScriptProperties((IExtendedProperties)smo, sw);
+                                    }
                                 }
                             }
                         }
@@ -247,6 +264,11 @@ GO
                                     so.ScriptDrops = so.IncludeIfNotExists = true;
                                 }
                                 WriteScript(smo.Script(), sw);
+
+                                if (_ScriptProperties && smo is IExtendedProperties)
+                                {
+                                    ScriptProperties((IExtendedProperties)smo, sw);
+                                }
                             }
                         }
 
@@ -264,6 +286,10 @@ GO
                             {
                                 if (verbose) Console.WriteLine("Scripting {0}.{1}", table.Name, smo.Name);
                                 WriteScript(smo.Script(), sw);
+                                if (_ScriptProperties && smo is IExtendedProperties)
+                                {
+                                    ScriptProperties((IExtendedProperties)smo, sw);
+                                }
                             }
                         }
 
@@ -362,6 +388,11 @@ GO
                     if (verbose) Console.WriteLine("Scripting {0}", smo.Name);
                     so.ScriptDrops = so.IncludeIfNotExists = false;
                     WriteScript(smo.Script(so), sw);
+
+                    if (_ScriptProperties && smo is IExtendedProperties)
+                    {
+                        ScriptProperties((IExtendedProperties)smo, sw);
+                    }
                 }
             }
         }
@@ -389,10 +420,20 @@ GO
                                 WriteScript(smo.Script(so), sw);
                             }
                             so.ScriptDrops = so.IncludeIfNotExists = false;
+                            
                             if (_ScriptAsCreate)
+                            {
                                 WriteScript(smo.Script(so), sw);
+                            }
                             else
+                            {
                                 WriteScript(smo.Script(so), sw, "CREATE PROC", "ALTER PROC");
+                            }
+
+                            if (_ScriptProperties && smo is IExtendedProperties)
+                            {
+                                ScriptProperties((IExtendedProperties)smo, sw);
+                            }
                         }
                     }
                 }
@@ -424,6 +465,11 @@ GO
                             }
                             so.ScriptDrops = so.IncludeIfNotExists = false;
                             WriteScript(smo.Script(so), sw);
+
+                            if (_ScriptProperties && smo is IExtendedProperties)
+                            {
+                                ScriptProperties((IExtendedProperties)smo, sw);
+                            }
                         }
                     }
                 }
@@ -459,6 +505,11 @@ GO
                             }
                             so.ScriptDrops = so.IncludeIfNotExists = false;
                             WriteScript(smo.Script(so), sw);
+
+                            if (_ScriptProperties && smo is IExtendedProperties)
+                            {
+                                ScriptProperties((IExtendedProperties)smo, sw);
+                            }
                         }
                     }
                 }
@@ -490,6 +541,11 @@ GO
                         }
                         so.ScriptDrops = so.IncludeIfNotExists = false;
                         WriteScript(smo.Script(so), sw);
+
+                        if (_ScriptProperties && smo is IExtendedProperties)
+                        {
+                            ScriptProperties((IExtendedProperties)smo, sw);
+                        }
                     }
                 }
             }
@@ -516,6 +572,11 @@ GO
                         }
                         so.ScriptDrops = so.IncludeIfNotExists = false;
                         WriteScript(smo.Script(so), sw);
+
+                        if (_ScriptProperties && smo is IExtendedProperties)
+                        {
+                            ScriptProperties((IExtendedProperties)smo, sw);
+                        }
                     }
                 }
             }
@@ -543,6 +604,11 @@ GO
                         }
                         so.ScriptDrops = so.IncludeIfNotExists = false;
                         WriteScript(smo.Script(so), sw);
+
+                        if (_ScriptProperties && smo is IExtendedProperties)
+                        {
+                            ScriptProperties((IExtendedProperties)smo, sw);
+                        }
                     }
                 }
             }
@@ -571,6 +637,11 @@ GO
                         }
                         so.ScriptDrops = so.IncludeIfNotExists = false;
                         WriteScript(smo.Script(so), sw);
+
+                        if (_ScriptProperties && smo is IExtendedProperties)
+                        {
+                            ScriptProperties((IExtendedProperties)smo, sw);
+                        }
                     }
                 }
             }
@@ -597,6 +668,11 @@ GO
                         }
                         so.ScriptDrops = so.IncludeIfNotExists = false;
                         WriteScript(smo.Script(so), sw);
+
+                        if (_ScriptProperties && smo is IExtendedProperties)
+                        {
+                            ScriptProperties((IExtendedProperties)smo, sw);
+                        }
                     }
                 }
             }
@@ -636,8 +712,24 @@ GO
                         }
                         so.ScriptDrops = so.IncludeIfNotExists = false;
                         WriteScript(smo.Script(so), sw);
+                        
+                        if (_ScriptProperties && smo is IExtendedProperties)
+                        {
+                            ScriptProperties((IExtendedProperties)smo, sw);
+                        }
                     }
                 }
+            }
+        }
+
+        private void ScriptProperties(IExtendedProperties obj, StreamWriter sw)
+        {
+            if (obj == null) throw new ArgumentNullException("obj");
+            if (sw == null) throw new ArgumentNullException("sw");
+
+            foreach (ExtendedProperty ep in obj.ExtendedProperties)
+            {
+                WriteScript(ep.Script(), sw);
             }
         }
 

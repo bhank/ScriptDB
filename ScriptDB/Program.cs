@@ -53,6 +53,8 @@ namespace Elsasoft.ScriptDb
                 string outputDirectory = arguments["outDir"];
                 bool scriptData = arguments["d"] != null;
                 bool verbose = arguments["v"] != null;
+                bool scriptProperties = arguments["p"] != null;
+
                 if (connStr == null || outputDirectory == null)
                 {
                     PrintHelp();
@@ -90,7 +92,7 @@ namespace Elsasoft.ScriptDb
                     ds.CreateOnly = false;
                 if (arguments["filename"] != null)
                     ds.OutputFileName = arguments["filename"];
-                ds.GenerateScript(connStr, outputDirectory, scriptData, verbose);
+                ds.GenerateScript(connStr, outputDirectory, scriptData, verbose, scriptProperties);
             }
             catch (Exception e)
             {
@@ -119,6 +121,7 @@ ScriptDb.exe
     OutputDirectory
     [-d]
     [-v]
+    [-p]
     [-table:table1,table2] [-TableOneFile] 
     [-view:view1,view2] 
     [-sp:sp1,sp2] 
@@ -138,14 +141,16 @@ OutputDirectory is a directory where you want the output placed.
 -v to say whether you want me to be chatty or not.
 Default is true because I am friendly and outgoing.
 
-table - coma separated list of tables to script
+-p to script extended properties for each object along with the DDL.
+
+table - comma separated list of tables to script
 
 TableOneFile - if specified table definition will be scripted into
 one file instad of multiple scripts
 
-view - coma separated list of views to script
+view - comma separated list of views to script
 
-sp - coma separated list of stored procedures to script
+sp - comma separated list of stored procedures to script
 
 ScriptAsCreate - if specified then stored procedures will be scripted
 as create instead of as alter statements
@@ -154,12 +159,12 @@ IncludeDatabase - Include Database Context in the script
 
 CreateOnly - Do not generate DROP statements
 
-filename - speicfy output filename. If file exists - script will be appended to the end of the file
+filename - specify output filename. If file exists - script will be appended to the end of the file
            specify - to output to console
 
 Example: 
 
-ScriptDb.exe -con:server=(local);database=pubs;trusted_connection=yes -outDir:scripts [-d] [-v] [-table:table1,table2] [-TableOneFile] [-view:view1,view2] [-sp:sp1,sp2] [-ScriptAsCreate] [-Permissions] [-NoCollation] [-IncludeDatabase] -filename:-
+ScriptDb.exe -con:server=(local);database=pubs;trusted_connection=yes -outDir:scripts [-d] [-v] [-p] [-table:table1,table2] [-TableOneFile] [-view:view1,view2] [-sp:sp1,sp2] [-ScriptAsCreate] [-Permissions] [-NoCollation] [-IncludeDatabase] -filename:-
 
 ");
         }
