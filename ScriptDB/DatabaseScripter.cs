@@ -50,7 +50,7 @@ GO
 ";
 
         #region Private Variables
-        
+
         private string[] _TableFilter = new string[0];
         private string[] _RulesFilter = new string[0];
         private string[] _DefaultsFilter = new string[0];
@@ -80,14 +80,14 @@ GO
                    || _SprocsFilter.Length > 0 || _UdtsFilter.Length > 0 || _SchemasFilter.Length > 0
                    || _DdlTriggersFilter.Length > 0;
         }
-    
+
         /// <summary>
         /// does all the work.
         /// </summary>
         /// <param name="connStr"></param>
         /// <param name="outputDirectory"></param>
         /// <param name="verbose"></param>
-        public void GenerateScript(string connStr, string outputDirectory, 
+        public void GenerateScript(string connStr, string outputDirectory,
                                    bool scriptData, bool verbose, bool scriptProperties)
         {
             this._ScriptProperties = scriptProperties;
@@ -170,7 +170,7 @@ GO
                             if (!_CreateOnly)
                             {
                                 so.ScriptDrops = so.IncludeIfNotExists = true;
-                                WriteScript(table.Script(so), sw);                                
+                                WriteScript(table.Script(so), sw);
                             }
                             so.ScriptDrops = so.IncludeIfNotExists = false;
                             WriteScript(table.Script(so), sw);
@@ -420,7 +420,7 @@ GO
                                 WriteScript(smo.Script(so), sw);
                             }
                             so.ScriptDrops = so.IncludeIfNotExists = false;
-                            
+
                             if (_ScriptAsCreate)
                             {
                                 WriteScript(smo.Script(so), sw);
@@ -712,7 +712,7 @@ GO
                         }
                         so.ScriptDrops = so.IncludeIfNotExists = false;
                         WriteScript(smo.Script(so), sw);
-                        
+
                         if (_ScriptProperties && smo is IExtendedProperties)
                         {
                             ScriptProperties((IExtendedProperties)smo, sw);
@@ -854,7 +854,7 @@ GO
             if (!Directory.Exists(System.IO.Path.GetDirectoryName(Path))) Directory.CreateDirectory(System.IO.Path.GetDirectoryName(Path));
             return new StreamWriter(Path, Append);
         }
-        
+
         #endregion
 
         #region Public Properties

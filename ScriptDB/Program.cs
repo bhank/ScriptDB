@@ -72,16 +72,16 @@ namespace Elsasoft.ScriptDb
 
                 DatabaseScripter ds = new DatabaseScripter();
 
-                if (arguments["table"] != null) 
-                    ds.TableFilter= arguments["table"].Split(',');
-                if(arguments["view"] != null )
+                if (arguments["table"] != null)
+                    ds.TableFilter = arguments["table"].Split(',');
+                if (arguments["view"] != null)
                     ds.ViewsFilter = arguments["view"].Split(',');
-                if(arguments["sp"] != null )
+                if (arguments["sp"] != null)
                     ds.SprocsFilter = arguments["sp"].Split(',');
                 if (arguments["TableOneFile"] != null)
                     ds.TableOneFile = true;
-                if(arguments["ScriptAsCreate"] != null )
-                    ds.ScriptAsCreate =  true;
+                if (arguments["ScriptAsCreate"] != null)
+                    ds.ScriptAsCreate = true;
                 if (arguments["Permissions"] != null)
                     ds.Permissions = true;
                 if (arguments["NoCollation"] != null)
