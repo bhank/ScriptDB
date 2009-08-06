@@ -54,6 +54,7 @@ namespace Elsasoft.ScriptDb
                 bool scriptData = arguments["d"] != null;
                 bool verbose = arguments["v"] != null;
                 bool scriptProperties = arguments["p"] != null;
+                bool Purge = arguments["Purge"] != null;
 
                 if (connStr == null || outputDirectory == null)
                 {
@@ -66,8 +67,10 @@ namespace Elsasoft.ScriptDb
                     database = sc.Database;
                 }
 
-                if (!Directory.Exists(outputDirectory)) Directory.CreateDirectory(outputDirectory);
-                outputDirectory = Path.Combine(outputDirectory, database);
+                // Purge at the Server level only when we're doing all databases
+                if (Purge && Directory.Exists(outputDirectory))
+                    PurgeDirectory(outputDirectory, "*.sql");
+
                 if (!Directory.Exists(outputDirectory)) Directory.CreateDirectory(outputDirectory);
 
                 DatabaseScripter ds = new DatabaseScripter();
@@ -92,7 +95,7 @@ namespace Elsasoft.ScriptDb
                     ds.CreateOnly = true;
                 if (arguments["filename"] != null)
                     ds.OutputFileName = arguments["filename"];
-                ds.GenerateScript(connStr, outputDirectory, scriptData, verbose, scriptProperties);
+                ds.GenerateScript(connStr, outputDirectory, Purge, scriptData, verbose, scriptProperties);
             }
             catch (Exception e)
             {
@@ -110,6 +113,36 @@ namespace Elsasoft.ScriptDb
                 }
             }
         }
+
+
+        public static void PurgeDirectory(string DirName, string FileSpec)
+        {
+            string FullPath = Path.GetFullPath(DirName);
+            try
+            {
+                //s = string.Format(@"/c rmdir ""{0}"" /s /q", Path.GetFullPath(outputDirectory));
+                //System.Diagnostics.Process.Start(@"c:\windows\system32\cmd.exe", s);
+
+                // Remove flags from all files in the current directory
+                foreach (string s in Directory.GetFiles(FullPath, FileSpec, SearchOption.AllDirectories))
+                {
+                    // skip files inside .svn folders (although these might be skipped regardless
+                    // since they have a hidden attribute) 
+                    if (!s.Contains(@"\.svn\"))
+                    {
+                        FileInfo file = new FileInfo(s);
+                        file.Attributes = FileAttributes.Normal;
+                        file.Delete();
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Exception {0} : {1}", e.Message, FullPath);
+            };
+        }
+
+
 
         private static void PrintHelp()
         {
@@ -129,6 +162,7 @@ ScriptDb.exe
     [-Permissions] 
     [-NoCollation]
     [-CreateOnly]
+    [-Purge]
     [-filename:<FileName> | -]
 
 -con:<ConnectionString> is a connection string to the db.
@@ -143,6 +177,7 @@ ScriptDb.exe
 -ScriptAsCreate - script stored procedures as CREATE instead ALTER
 -IncludeDatabase - Include Database Context in scripted objects
 -CreateOnly - Do not generate DROP statements
+-Purge - ensures output folder is emptied of all files before generating scripts
 -filename - specify output filename. If file exists, script will be appended to the end of the file
            specify '-' to output to console
 

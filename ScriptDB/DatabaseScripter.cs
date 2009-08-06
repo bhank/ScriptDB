@@ -87,22 +87,34 @@ GO
         /// <param name="connStr"></param>
         /// <param name="outputDirectory"></param>
         /// <param name="verbose"></param>
-        public void GenerateScript(string connStr, string outputDirectory,
+        public void GenerateScript(string connStr, string outputDirectory, bool purgeDirectory,
                                    bool scriptData, bool verbose, bool scriptProperties)
         {
+
             this._ScriptProperties = scriptProperties;
 
             using (SqlConnection connection = new SqlConnection(connStr))
             {
                 ServerConnection sc = new ServerConnection(connection);
                 Server s = new Server(sc);
+
+                Database db = s.Databases[connection.Database];
+                // Output folder
+                outputDirectory = Path.Combine(outputDirectory, db.Name);
+                if (Directory.Exists(outputDirectory))
+                {
+                    if (purgeDirectory) Program.PurgeDirectory(outputDirectory, "*.sql");
+                }
+                else
+                {
+                    Directory.CreateDirectory(outputDirectory);
+                }
+
                 s.SetDefaultInitFields(typeof(StoredProcedure), "IsSystemObject", "IsEncrypted");
                 s.SetDefaultInitFields(typeof(Table), "IsSystemObject");
                 s.SetDefaultInitFields(typeof(View), "IsSystemObject", "IsEncrypted");
                 s.SetDefaultInitFields(typeof(UserDefinedFunction), "IsSystemObject", "IsEncrypted");
                 s.ConnectionContext.SqlExecutionModes = SqlExecutionModes.CaptureSql;
-
-                Database db = s.Databases[connection.Database];
 
                 ScriptingOptions so = new ScriptingOptions();
                 so.Default = true;
