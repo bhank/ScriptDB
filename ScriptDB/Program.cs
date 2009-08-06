@@ -131,36 +131,20 @@ ScriptDb.exe
     [-CreateOnly]
     [-filename:<FileName> | -]
 
-ConnectionString is a connection string to the db you want to 
-generate scripts for.
-
-OutputDirectory is a directory where you want the output placed.
-
--d to say that you want bcp files to be scripted.
-
--v to say whether you want me to be chatty or not.
-Default is true because I am friendly and outgoing.
-
--p to script extended properties for each object along with the DDL.
-
-table - comma separated list of tables to script
-
-TableOneFile - if specified table definition will be scripted into
-one file instad of multiple scripts
-
-view - comma separated list of views to script
-
-sp - comma separated list of stored procedures to script
-
-ScriptAsCreate - if specified then stored procedures will be scripted
-as create instead of as alter statements
-
-IncludeDatabase - Include Database Context in the script
-
-CreateOnly - Do not generate DROP statements
-
-filename - specify output filename. If file exists - script will be appended to the end of the file
-           specify - to output to console
+-con:<ConnectionString> is a connection string to the db.
+-outDir:<OutputDirectory> is where the output scripts are placed.
+-d script data to files for importing with bcp
+-v for verbose output.
+-p to script extended properties for each object.
+-table - comma separated list of tables to script
+-TableOneFile - script table definition into one file instad of multiple
+-view - comma separated list of views to script
+-sp - comma separated list of stored procedures to script
+-ScriptAsCreate - script stored procedures as CREATE instead ALTER
+-IncludeDatabase - Include Database Context in scripted objects
+-CreateOnly - Do not generate DROP statements
+-filename - specify output filename. If file exists, script will be appended to the end of the file
+           specify '-' to output to console
 
 Example: 
 
