@@ -178,7 +178,7 @@ GO
                         #region Table Definition
                         using (StreamWriter sw = GetStreamWriter(FileName, false))
                         {
-                            if (verbose) Console.WriteLine("Scripting {0}", table.Name);
+                            if (verbose) Console.WriteLine("{0} Scripting {1}", db.Name, table.Name);
                             if (!_CreateOnly)
                             {
                                 so.ScriptDrops = so.IncludeIfNotExists = true;
@@ -207,7 +207,7 @@ GO
                                                      FixUpFileName(string.Format("{0}.{1}.sql", table.Name, smo.Name)));
                                 using (StreamWriter sw = GetStreamWriter(FileName, _TableOneFile))
                                 {
-                                    if (verbose) Console.WriteLine("Scripting {0}.{1}", table.Name, smo.Name);
+                                    if (verbose) Console.WriteLine("{0] Scripting {1}.{2}", db.Name, table.Name, smo.Name);
                                     if (!_CreateOnly)
                                     {
                                         so.ScriptDrops = so.IncludeIfNotExists = true;
@@ -241,7 +241,7 @@ GO
                                                      FixUpFileName(string.Format("{0}.{1}.sql", table.Name, smo.Name)));
                                 using (StreamWriter sw = GetStreamWriter(FileName, _TableOneFile))
                                 {
-                                    if (verbose) Console.WriteLine("Scripting {0}.{1}", table.Name, smo.Name);
+                                    if (verbose) Console.WriteLine("{0} Scripting {1}.{2}", db.Name, table.Name, smo.Name);
                                     if (!_CreateOnly)
                                     {
                                         so.ScriptDrops = so.IncludeIfNotExists = true;
@@ -270,7 +270,7 @@ GO
                                                  FixUpFileName(string.Format("{0}.{1}.sql", table.Name, smo.Name)));
                             using (StreamWriter sw = GetStreamWriter(FileName, _TableOneFile))
                             {
-                                if (verbose) Console.WriteLine("Scripting {0}.{1}", table.Name, smo.Name);
+                                if (verbose) Console.WriteLine("{0} Scripting {1}.{2}", db.Name, table.Name, smo.Name);
                                 if (!_CreateOnly)
                                 {
                                     so.ScriptDrops = so.IncludeIfNotExists = true;
@@ -296,7 +296,7 @@ GO
                                                  FixUpFileName(string.Format("{0}.{1}.sql", table.Name, smo.Name)));
                             using (StreamWriter sw = GetStreamWriter(FileName, _TableOneFile))
                             {
-                                if (verbose) Console.WriteLine("Scripting {0}.{1}", table.Name, smo.Name);
+                                if (verbose) Console.WriteLine("{0} Scripting {1}.{2}", db.Name, table.Name, smo.Name);
                                 WriteScript(smo.Script(), sw);
                                 if (_ScriptProperties && smo is IExtendedProperties)
                                 {
@@ -397,7 +397,7 @@ GO
                 }
                 using (StreamWriter sw = GetStreamWriter(Path.Combine(assemblies, FixUpFileName(smo.Name) + ".sql"), false))
                 {
-                    if (verbose) Console.WriteLine("Scripting {0}", smo.Name);
+                    if (verbose) Console.WriteLine("{0} Scripting {1}", db.Name, smo.Name);
                     so.ScriptDrops = so.IncludeIfNotExists = false;
                     WriteScript(smo.Script(so), sw);
 
@@ -425,7 +425,7 @@ GO
                     {
                         using (StreamWriter sw = GetStreamWriter(Path.Combine(sprocs, FixUpFileName(smo.Name) + ".sql"), false))
                         {
-                            if (verbose) Console.WriteLine("Scripting {0}", smo.Name);
+                            if (verbose) Console.WriteLine("{0} Scripting {1}", db.Name, smo.Name);
                             if (_ScriptAsCreate)
                             {
                                 so.ScriptDrops = so.IncludeIfNotExists = true;
@@ -469,7 +469,7 @@ GO
                     {
                         using (StreamWriter sw = GetStreamWriter(Path.Combine(views, FixUpFileName(smo.Name) + ".sql"), false))
                         {
-                            if (verbose) Console.WriteLine("Scripting {0}", smo.Name);
+                            if (verbose) Console.WriteLine("{0} Scripting {1}", db.Name, smo.Name);
                             if (!_CreateOnly)
                             {
                                 so.ScriptDrops = so.IncludeIfNotExists = true;
@@ -509,7 +509,7 @@ GO
                     {
                         using (StreamWriter sw = GetStreamWriter(Path.Combine(udfs, FixUpFileName(smo.Name) + ".sql"), false))
                         {
-                            if (verbose) Console.WriteLine("Scripting {0}", smo.Name);
+                            if (verbose) Console.WriteLine("{0} Scripting {1}", db.Name, smo.Name);
                             if (!_CreateOnly)
                             {
                                 so.ScriptDrops = so.IncludeIfNotExists = true;
@@ -545,7 +545,7 @@ GO
                 {
                     using (StreamWriter sw = GetStreamWriter(Path.Combine(types, FixUpFileName(smo.Name) + ".sql"), false))
                     {
-                        if (verbose) Console.WriteLine("Scripting {0}", smo.Name);
+                        if (verbose) Console.WriteLine("{0} Scripting {1}", db.Name, smo.Name);
                         if (!_CreateOnly)
                         {
                             so.ScriptDrops = so.IncludeIfNotExists = true;
@@ -576,7 +576,7 @@ GO
                 {
                     using (StreamWriter sw = GetStreamWriter(Path.Combine(types, FixUpFileName(smo.Name) + ".sql"), false))
                     {
-                        if (verbose) Console.WriteLine("Scripting {0}", smo.Name);
+                        if (verbose) Console.WriteLine("{0} Scripting {1}", db.Name, smo.Name);
                         if (!_CreateOnly)
                         {
                             so.ScriptDrops = so.IncludeIfNotExists = true;
@@ -608,7 +608,7 @@ GO
                 {
                     using (StreamWriter sw = GetStreamWriter(Path.Combine(rules, FixUpFileName(smo.Name) + ".sql"), false))
                     {
-                        if (verbose) Console.WriteLine("Scripting {0}", smo.Name);
+                        if (verbose) Console.WriteLine("{0} Scripting {1}", db.Name, smo.Name);
                         if (!_CreateOnly)
                         {
                             so.ScriptDrops = so.IncludeIfNotExists = true;
@@ -641,7 +641,7 @@ GO
                         StreamWriter sw =
                             GetStreamWriter(Path.Combine(defaults, FixUpFileName(smo.Name) + ".sql"), false))
                     {
-                        if (verbose) Console.WriteLine("Scripting {0}", smo.Name);
+                        if (verbose) Console.WriteLine("{0} Scripting {1}", db.Name, smo.Name);
                         if (!_CreateOnly)
                         {
                             so.ScriptDrops = so.IncludeIfNotExists = true;
@@ -672,7 +672,7 @@ GO
                 {
                     using (StreamWriter sw = GetStreamWriter(Path.Combine(triggers, FixUpFileName(smo.Name) + ".sql"), false))
                     {
-                        if (verbose) Console.WriteLine("Scripting {0}", smo.Name);
+                        if (verbose) Console.WriteLine("{0} Scripting {1}", db.Name, smo.Name);
                         if (!_CreateOnly)
                         {
                             so.ScriptDrops = so.IncludeIfNotExists = true;
@@ -716,7 +716,7 @@ GO
                 {
                     using (StreamWriter sw = GetStreamWriter(Path.Combine(schemas, FixUpFileName(smo.Name) + ".sql"), false))
                     {
-                        if (verbose) Console.WriteLine("Scripting {0}", smo.Name);
+                        if (verbose) Console.WriteLine("{0} Scripting {1}", db.Name, smo.Name);
                         if (!_CreateOnly)
                         {
                             so.ScriptDrops = so.IncludeIfNotExists = true;
