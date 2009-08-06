@@ -87,60 +87,81 @@ GO
         /// <param name="connStr"></param>
         /// <param name="outputDirectory"></param>
         /// <param name="verbose"></param>
-        public void GenerateScript(string connStr, string outputDirectory, bool purgeDirectory,
-                                   bool scriptData, bool verbose, bool scriptProperties)
+        public void GenerateScripts(string connStr, string outputDirectory,
+                                    bool scriptAllDatabases, bool purgeDirectory,
+                                    bool scriptData, bool verbose, bool scriptProperties)
         {
 
+            SqlConnection connection = new SqlConnection(connStr);
+            ServerConnection sc = new ServerConnection(connection);
+            Server s = new Server(sc);
+
+            s.SetDefaultInitFields(typeof(StoredProcedure), "IsSystemObject", "IsEncrypted");
+            s.SetDefaultInitFields(typeof(Table), "IsSystemObject");
+            s.SetDefaultInitFields(typeof(View), "IsSystemObject", "IsEncrypted");
+            s.SetDefaultInitFields(typeof(UserDefinedFunction), "IsSystemObject", "IsEncrypted");
+            s.ConnectionContext.SqlExecutionModes = SqlExecutionModes.CaptureSql;
+
+            if (scriptAllDatabases)
+            {
+                foreach (Database db in s.Databases)
+                {
+                    try
+                    {
+                        GenerateDatabaseScript(db, outputDirectory, purgeDirectory, scriptData, verbose, scriptProperties);
+                    }
+                    catch (Exception e)
+                    {
+                        if (verbose) Console.WriteLine("Exception: {0}", e.Message);
+                    }
+                }
+            }
+            else
+                GenerateDatabaseScript(s.Databases[connection.Database], outputDirectory, purgeDirectory,
+                    scriptData, verbose, scriptProperties);
+
+        }
+
+        private void GenerateDatabaseScript(Database db, string outputDirectory, bool purgeDirectory,
+                           bool scriptData, bool verbose, bool scriptProperties)
+        {
             this._ScriptProperties = scriptProperties;
 
-            using (SqlConnection connection = new SqlConnection(connStr))
+            // Output folder
+            outputDirectory = Path.Combine(outputDirectory, db.Name);
+            if (Directory.Exists(outputDirectory))
             {
-                ServerConnection sc = new ServerConnection(connection);
-                Server s = new Server(sc);
+                if (purgeDirectory) Program.PurgeDirectory(outputDirectory, "*.sql");
+            }
+            else
+            {
+                Directory.CreateDirectory(outputDirectory);
+            }
 
-                Database db = s.Databases[connection.Database];
-                // Output folder
-                outputDirectory = Path.Combine(outputDirectory, db.Name);
-                if (Directory.Exists(outputDirectory))
-                {
-                    if (purgeDirectory) Program.PurgeDirectory(outputDirectory, "*.sql");
-                }
-                else
-                {
-                    Directory.CreateDirectory(outputDirectory);
-                }
+            ScriptingOptions so = new ScriptingOptions();
+            so.Default = true;
+            so.DriDefaults = true;
+            so.DriUniqueKeys = true;
+            so.Bindings = true;
+            so.Permissions = _Permissions;
+            so.NoCollation = _NoCollation;
+            so.IncludeDatabaseContext = _IncludeDatabase;
 
-                s.SetDefaultInitFields(typeof(StoredProcedure), "IsSystemObject", "IsEncrypted");
-                s.SetDefaultInitFields(typeof(Table), "IsSystemObject");
-                s.SetDefaultInitFields(typeof(View), "IsSystemObject", "IsEncrypted");
-                s.SetDefaultInitFields(typeof(UserDefinedFunction), "IsSystemObject", "IsEncrypted");
-                s.ConnectionContext.SqlExecutionModes = SqlExecutionModes.CaptureSql;
+            ScriptTables(verbose, db, so, outputDirectory, scriptData);
+            ScriptDefaults(verbose, db, so, outputDirectory);
+            ScriptRules(verbose, db, so, outputDirectory);
+            ScriptUddts(verbose, db, so, outputDirectory);
+            ScriptUdfs(verbose, db, so, outputDirectory);
+            ScriptViews(verbose, db, so, outputDirectory);
+            ScriptSprocs(verbose, db, so, outputDirectory);
 
-                ScriptingOptions so = new ScriptingOptions();
-                so.Default = true;
-                so.DriDefaults = true;
-                so.DriUniqueKeys = true;
-                so.Bindings = true;
-                so.Permissions = _Permissions;
-                so.NoCollation = _NoCollation;
-                so.IncludeDatabaseContext = _IncludeDatabase;
-
-                ScriptTables(verbose, db, so, outputDirectory, scriptData);
-                ScriptDefaults(verbose, db, so, outputDirectory);
-                ScriptRules(verbose, db, so, outputDirectory);
-                ScriptUddts(verbose, db, so, outputDirectory);
-                ScriptUdfs(verbose, db, so, outputDirectory);
-                ScriptViews(verbose, db, so, outputDirectory);
-                ScriptSprocs(verbose, db, so, outputDirectory);
-
-                if (s.Information.Version.Major >= 9 &&
-                    db.CompatibilityLevel >= CompatibilityLevel.Version90)
-                {
-                    ScriptUdts(verbose, db, so, outputDirectory);
-                    ScriptSchemas(verbose, db, so, outputDirectory);
-                    ScriptDdlTriggers(verbose, db, so, outputDirectory);
-                    ScriptAssemblies(verbose, db, so, outputDirectory);
-                }
+            if (db.Version >= 9 &&
+                db.CompatibilityLevel >= CompatibilityLevel.Version90)
+            {
+                ScriptUdts(verbose, db, so, outputDirectory);
+                ScriptSchemas(verbose, db, so, outputDirectory);
+                ScriptDdlTriggers(verbose, db, so, outputDirectory);
+                //ScriptAssemblies(verbose, db, so, outputDirectory);
             }
         }
 

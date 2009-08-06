@@ -55,6 +55,7 @@ namespace Elsasoft.ScriptDb
                 bool verbose = arguments["v"] != null;
                 bool scriptProperties = arguments["p"] != null;
                 bool Purge = arguments["Purge"] != null;
+                bool scriptAllDatabases = arguments["ScriptAllDatabases"] != null;
 
                 if (connStr == null || outputDirectory == null)
                 {
@@ -68,7 +69,7 @@ namespace Elsasoft.ScriptDb
                 }
 
                 // Purge at the Server level only when we're doing all databases
-                if (Purge && Directory.Exists(outputDirectory))
+                if (Purge && scriptAllDatabases && Directory.Exists(outputDirectory))
                     PurgeDirectory(outputDirectory, "*.sql");
 
                 if (!Directory.Exists(outputDirectory)) Directory.CreateDirectory(outputDirectory);
@@ -95,7 +96,7 @@ namespace Elsasoft.ScriptDb
                     ds.CreateOnly = true;
                 if (arguments["filename"] != null)
                     ds.OutputFileName = arguments["filename"];
-                ds.GenerateScript(connStr, outputDirectory, Purge, scriptData, verbose, scriptProperties);
+                ds.GenerateScripts(connStr, outputDirectory, scriptAllDatabases, Purge, scriptData, verbose, scriptProperties);
             }
             catch (Exception e)
             {
@@ -159,6 +160,7 @@ ScriptDb.exe
     [-view:view1,view2] 
     [-sp:sp1,sp2] 
     [-ScriptAsCreate] 
+    [-ScriptAllDatabases]
     [-Permissions] 
     [-NoCollation]
     [-CreateOnly]
@@ -175,6 +177,7 @@ ScriptDb.exe
 -view - comma separated list of views to script
 -sp - comma separated list of stored procedures to script
 -ScriptAsCreate - script stored procedures as CREATE instead ALTER
+-ScriptAllDatabases - script all databases on the current server
 -IncludeDatabase - Include Database Context in scripted objects
 -CreateOnly - Do not generate DROP statements
 -Purge - ensures output folder is emptied of all files before generating scripts
