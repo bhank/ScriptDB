@@ -89,7 +89,7 @@ namespace Elsasoft.ScriptDb
                 if (arguments["IncludeDatabase"] != null)
                     ds.IncludeDatabase = true;
                 if (arguments["CreateOnly"] != null)
-                    ds.CreateOnly = false;
+                    ds.CreateOnly = true;
                 if (arguments["filename"] != null)
                     ds.OutputFileName = arguments["filename"];
                 ds.GenerateScript(connStr, outputDirectory, scriptData, verbose, scriptProperties);
