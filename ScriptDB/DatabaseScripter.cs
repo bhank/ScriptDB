@@ -29,6 +29,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Text;
 using System.Collections.Specialized;
 using System.Data.SqlClient;
@@ -37,6 +38,8 @@ using System.Diagnostics;
 
 using Microsoft.SqlServer.Management.Smo;
 using Microsoft.SqlServer.Management.Common;
+using Utils;
+using Rule = Microsoft.SqlServer.Management.Smo.Rule;
 
 namespace Elsasoft.ScriptDb
 {
@@ -52,6 +55,7 @@ GO
         #region Private Variables
 
         private string[] _TableFilter = new string[0];
+        private string[] _TableDataFilter = new string[0];
         private string[] _RulesFilter = new string[0];
         private string[] _DefaultsFilter = new string[0];
         private string[] _UddtsFilter = new string[0];
@@ -69,6 +73,8 @@ GO
         private bool _IncludeDatabase;
         private bool _CreateOnly = false;
         private bool _ScriptProperties = false;
+        private string _PostScriptingCommand = null;
+        private string _PreScriptingCommand = null;
 
         private string _OutputFileName = null;
         #endregion
@@ -91,7 +97,7 @@ GO
                                     bool scriptAllDatabases, bool purgeDirectory,
                                     bool scriptData, bool verbose, bool scriptProperties)
         {
-
+            ConnectionString = connStr;
             SqlConnection connection = new SqlConnection(connStr);
             ServerConnection sc = new ServerConnection(connection);
             Server s = new Server(sc);
@@ -102,40 +108,69 @@ GO
             s.SetDefaultInitFields(typeof(UserDefinedFunction), "IsSystemObject", "IsEncrypted");
             s.ConnectionContext.SqlExecutionModes = SqlExecutionModes.CaptureSql;
 
+            RunCommand(StartCommand, verbose, outputDirectory, s.Name, null);
+
+            // Purge at the Server level only when we're doing all databases
+            if (purgeDirectory && scriptAllDatabases && Directory.Exists(outputDirectory))
+            {
+                if (verbose) Console.Write("Purging directory...");
+                PurgeDirectory(outputDirectory, "*.sql");
+                if (verbose) Console.WriteLine("Done");
+            }
+
+
             if (scriptAllDatabases)
             {
                 foreach (Database db in s.Databases)
                 {
                     try
                     {
+                        RunCommand(PreScriptingCommand, verbose, outputDirectory, s.Name, db.Name);
                         GenerateDatabaseScript(db, outputDirectory, purgeDirectory, scriptData, verbose, scriptProperties);
+                        RunCommand(PostScriptingCommand, verbose, outputDirectory, s.Name, db.Name);
                     }
                     catch (Exception e)
                     {
-                        if (verbose) Console.WriteLine("Exception: {0}", e.Message);
+                        Console.WriteLine("Exception: {0}", e.Message);
                     }
                 }
             }
             else
-                GenerateDatabaseScript(s.Databases[connection.Database], outputDirectory, purgeDirectory,
+            {
+                var db = s.Databases[connection.Database];
+                if(db == null)
+                {
+                    throw new Exception(string.Format("Database '{0}' was not found", connection.Database));
+                }
+                RunCommand(PreScriptingCommand, verbose, outputDirectory, s.Name, db.Name);
+                GenerateDatabaseScript(db, outputDirectory, purgeDirectory,
                     scriptData, verbose, scriptProperties);
+                RunCommand(PostScriptingCommand, verbose, outputDirectory, s.Name, db.Name);
+            }
 
+            RunCommand(FinishCommand, verbose, outputDirectory, s.Name, null);
         }
 
+        // TODO: maybe pass in the databaseOutputDirectory instead of calculating it in here?
         private void GenerateDatabaseScript(Database db, string outputDirectory, bool purgeDirectory,
                            bool scriptData, bool verbose, bool scriptProperties)
         {
             this._ScriptProperties = scriptProperties;
 
             // Output folder
-            outputDirectory = Path.Combine(outputDirectory, db.Name);
-            if (Directory.Exists(outputDirectory))
+            var databaseOutputDirectory = Path.Combine(outputDirectory, db.Name);
+            if (Directory.Exists(databaseOutputDirectory))
             {
-                if (purgeDirectory) Program.PurgeDirectory(outputDirectory, "*.sql");
+                if (purgeDirectory)
+                {
+                    if (verbose) Console.Write("Purging database directory...");
+                    PurgeDirectory(databaseOutputDirectory, "*.sql");
+                    if (verbose) Console.WriteLine("done.");
+                }
             }
             else
             {
-                Directory.CreateDirectory(outputDirectory);
+                Directory.CreateDirectory(databaseOutputDirectory);
             }
 
             ScriptingOptions so = new ScriptingOptions();
@@ -147,36 +182,70 @@ GO
             so.NoCollation = _NoCollation;
             so.IncludeDatabaseContext = _IncludeDatabase;
 
-            ScriptTables(verbose, db, so, outputDirectory, scriptData);
-            ScriptDefaults(verbose, db, so, outputDirectory);
-            ScriptRules(verbose, db, so, outputDirectory);
-            ScriptUddts(verbose, db, so, outputDirectory);
-            ScriptUdfs(verbose, db, so, outputDirectory);
-            ScriptViews(verbose, db, so, outputDirectory);
-            ScriptSprocs(verbose, db, so, outputDirectory);
+            ScriptTables(verbose, db, so, databaseOutputDirectory, scriptData);
+            ScriptDefaults(verbose, db, so, databaseOutputDirectory);
+            ScriptRules(verbose, db, so, databaseOutputDirectory);
+            ScriptUddts(verbose, db, so, databaseOutputDirectory);
+            ScriptUdfs(verbose, db, so, databaseOutputDirectory);
+            ScriptViews(verbose, db, so, databaseOutputDirectory);
+            ScriptSprocs(verbose, db, so, databaseOutputDirectory);
 
             if (db.Version >= 9 &&
                 db.CompatibilityLevel >= CompatibilityLevel.Version90)
             {
-                ScriptUdts(verbose, db, so, outputDirectory);
-                ScriptSchemas(verbose, db, so, outputDirectory);
-                ScriptDdlTriggers(verbose, db, so, outputDirectory);
-                //ScriptAssemblies(verbose, db, so, outputDirectory);
+                ScriptUdts(verbose, db, so, databaseOutputDirectory);
+                ScriptSchemas(verbose, db, so, databaseOutputDirectory);
+                ScriptDdlTriggers(verbose, db, so, databaseOutputDirectory);
+                //ScriptAssemblies(verbose, db, so, databaseOutputDirectory);
             }
         }
 
         #region Private Script Functions
+
+        private void ScriptIndexes(TableViewBase tableOrView, bool verbose, Database db, ScriptingOptions so, string tablesOrViewsOutputDirectory)
+        {
+            string indexes = Path.Combine(tablesOrViewsOutputDirectory, "Indexes");
+            string primaryKeys = Path.Combine(tablesOrViewsOutputDirectory, "PrimaryKeys");
+            string uniqueKeys = Path.Combine(tablesOrViewsOutputDirectory, "UniqueKeys");
+
+            string FileName = Path.Combine(tablesOrViewsOutputDirectory, GetScriptFileName(tableOrView));
+
+            foreach (Index smo in tableOrView.Indexes)
+            {
+                if (!smo.IsSystemObject)
+                {
+                    string dir =
+                        (smo.IndexKeyType == IndexKeyType.DriPrimaryKey) ? primaryKeys :
+                        (smo.IndexKeyType == IndexKeyType.DriUniqueKey) ? uniqueKeys : indexes;
+                    if (!_TableOneFile)
+                        FileName = Path.Combine(dir, GetScriptFileName(tableOrView, smo));
+                    using (StreamWriter sw = GetStreamWriter(FileName, _TableOneFile))
+                    {
+                        if (verbose) Console.WriteLine("{0} Scripting {1}.{2}", db.Name, tableOrView.Name, smo.Name);
+                        if (!_CreateOnly)
+                        {
+                            so.ScriptDrops = so.IncludeIfNotExists = true;
+                            WriteScript(smo.Script(so), sw);
+                        }
+                        so.ScriptDrops = so.IncludeIfNotExists = false;
+                        WriteScript(smo.Script(so), sw);
+
+                        if (_ScriptProperties && smo is IExtendedProperties)
+                        {
+                            ScriptProperties((IExtendedProperties)smo, sw);
+                        }
+                    }
+                }
+            }
+        }
 
         private void ScriptTables(bool verbose, Database db, ScriptingOptions so, string outputDirectory, bool scriptData)
         {
             string data = Path.Combine(outputDirectory, "Data");
             string tables = Path.Combine(outputDirectory, "Tables");
             string programmability = Path.Combine(outputDirectory, "Programmability");
-            string indexes = Path.Combine(tables, "Indexes");
             string constraints = Path.Combine(tables, "Constraints");
             string foreignKeys = Path.Combine(tables, "ForeignKeys");
-            string primaryKeys = Path.Combine(tables, "PrimaryKeys");
-            string uniqueKeys = Path.Combine(tables, "UniqueKeys");
             string triggers = Path.Combine(programmability, "Triggers");
 
             //            if (!Directory.Exists(tables)) Directory.CreateDirectory(tables);
@@ -195,7 +264,7 @@ GO
                 {
                     if (!FilterExists() || Array.IndexOf(_TableFilter, table.Name) >= 0)
                     {
-                        string FileName = Path.Combine(tables, FixUpFileName(table.Name) + ".sql");
+                        string FileName = Path.Combine(tables, GetScriptFileName(table));
                         #region Table Definition
                         using (StreamWriter sw = GetStreamWriter(FileName, false))
                         {
@@ -223,9 +292,7 @@ GO
                             if (!smo.IsSystemObject && !smo.IsEncrypted)
                             {
                                 if (!_TableOneFile)
-                                    FileName =
-                                        Path.Combine(triggers,
-                                                     FixUpFileName(string.Format("{0}.{1}.sql", table.Name, smo.Name)));
+                                    FileName = Path.Combine(triggers, GetScriptFileName(table, smo));
                                 using (StreamWriter sw = GetStreamWriter(FileName, _TableOneFile))
                                 {
                                     if (verbose) Console.WriteLine("{0} Scripting {1}.{2}", db.Name, table.Name, smo.Name);
@@ -247,48 +314,14 @@ GO
 
                         #endregion
 
-                        #region Indexes
-
-                        foreach (Index smo in table.Indexes)
-                        {
-                            if (!smo.IsSystemObject)
-                            {
-                                string dir =
-                                    (smo.IndexKeyType == IndexKeyType.DriPrimaryKey) ? primaryKeys :
-                                    (smo.IndexKeyType == IndexKeyType.DriUniqueKey) ? uniqueKeys : indexes;
-                                if (!_TableOneFile)
-                                    FileName =
-                                        Path.Combine(dir,
-                                                     FixUpFileName(string.Format("{0}.{1}.sql", table.Name, smo.Name)));
-                                using (StreamWriter sw = GetStreamWriter(FileName, _TableOneFile))
-                                {
-                                    if (verbose) Console.WriteLine("{0} Scripting {1}.{2}", db.Name, table.Name, smo.Name);
-                                    if (!_CreateOnly)
-                                    {
-                                        so.ScriptDrops = so.IncludeIfNotExists = true;
-                                        WriteScript(smo.Script(so), sw);
-                                    }
-                                    so.ScriptDrops = so.IncludeIfNotExists = false;
-                                    WriteScript(smo.Script(so), sw);
-
-                                    if (_ScriptProperties && smo is IExtendedProperties)
-                                    {
-                                        ScriptProperties((IExtendedProperties)smo, sw);
-                                    }
-                                }
-                            }
-                        }
-
-                        #endregion
+                        ScriptIndexes(table, verbose, db, so, tables);
 
                         #region Foreign Keys
 
                         foreach (ForeignKey smo in table.ForeignKeys)
                         {
                             if (!_TableOneFile)
-                                FileName =
-                                    Path.Combine(foreignKeys,
-                                                 FixUpFileName(string.Format("{0}.{1}.sql", table.Name, smo.Name)));
+                                FileName = Path.Combine(foreignKeys, GetScriptFileName(table, smo));
                             using (StreamWriter sw = GetStreamWriter(FileName, _TableOneFile))
                             {
                                 if (verbose) Console.WriteLine("{0} Scripting {1}.{2}", db.Name, table.Name, smo.Name);
@@ -312,9 +345,7 @@ GO
                         foreach (Check smo in table.Checks)
                         {
                             if (!_TableOneFile)
-                                FileName =
-                                    Path.Combine(constraints,
-                                                 FixUpFileName(string.Format("{0}.{1}.sql", table.Name, smo.Name)));
+                                FileName = Path.Combine(constraints, GetScriptFileName(table, smo));
                             using (StreamWriter sw = GetStreamWriter(FileName, _TableOneFile))
                             {
                                 if (verbose) Console.WriteLine("{0} Scripting {1}.{2}", db.Name, table.Name, smo.Name);
@@ -330,31 +361,9 @@ GO
 
                         #region Script Data
 
-                        if (scriptData)
+                        if (scriptData && MatchesTableDataFilters(db.Name, table.Name))
                         {
-                            using (Process p = new Process())
-                            {
-                                //
-                                // makes more sense to pass this cmd line as an arg to scriptdb.exe, 
-                                // but I am too lazy to do that now...
-                                // besides, we have to leave some work for others!
-                                //
-                                p.StartInfo.Arguments = string.Format("\"{0}.{1}.{2}\" out {2}.txt -c -T -S{3}",
-                                                                      db.Name,
-                                                                      table.Schema,
-                                                                      table.Name,
-                                                                      db.Parent.Name);
-
-                                p.StartInfo.FileName = "bcp.exe";
-                                p.StartInfo.WorkingDirectory = data;
-                                p.StartInfo.UseShellExecute = false;
-                                p.StartInfo.RedirectStandardOutput = true;
-                                if (verbose) Console.WriteLine("bcp.exe {0}", p.StartInfo.Arguments);
-                                p.Start();
-                                string output = p.StandardOutput.ReadToEnd();
-                                p.WaitForExit();
-                                if (verbose) Console.WriteLine(output);
-                            }
+                            ScriptTableData(db, table, verbose, data);
                         }
 
                         #endregion
@@ -362,9 +371,98 @@ GO
                 }
                 else
                 {
-                    if (verbose) Console.WriteLine("skipping system object {0}", table.Name);
+                    //if (verbose) Console.WriteLine("skipping system object {0}", table.Name);
                 }
             }
+        }
+
+        private void ScriptTableData(Database db, Table table, bool verbose, string dataDirectory)
+        {
+            ScriptTableDataToCsv(db, table, verbose, dataDirectory);
+        }
+
+        private void ScriptTableDataToCsv(Database db, Table table, bool verbose, string dataDirectory)
+        {
+            if (!Directory.Exists(dataDirectory)) Directory.CreateDirectory(dataDirectory);
+            var fileName = Path.ChangeExtension(Path.Combine(dataDirectory, GetScriptFileName(table)), "csv");
+            using(var csvWriter = new CsvWriter(fileName))
+            {
+                var fieldNames = new string[table.Columns.Count];
+                for(var i = 0; i < table.Columns.Count; i++)
+                {
+                    fieldNames[i] = table.Columns[i].Name;
+                }
+                csvWriter.WriteFields(fieldNames);
+
+                var sqlConnection = new SqlConnection(ConnectionString);
+                sqlConnection.Open();
+                var command = sqlConnection.CreateCommand();
+                command.CommandText = string.Format("SELECT * FROM [{0}].[{1}].[{2}]", db.Name, table.Schema, table.Name);
+                command.CommandType = CommandType.Text;
+                var reader = command.ExecuteReader();
+
+                while(reader.Read())
+                {
+                    var values = new object[table.Columns.Count];
+                    reader.GetValues(values);
+                    csvWriter.WriteFields(values);
+                }
+            }
+        }
+
+        private void ScriptTableDataWithBcp(Database db, Table table, bool verbose, string dataDirectory)
+        {
+            if (!Directory.Exists(dataDirectory)) Directory.CreateDirectory(dataDirectory);
+
+            using (Process p = new Process())
+            {
+                var credentials = "-T";
+
+                var builder = new SqlConnectionStringBuilder(ConnectionString);
+                if (!builder.IntegratedSecurity)
+                {
+                    credentials = string.Format("-U \"{0}\" -P \"{1}\"", builder.UserID, builder.Password);
+                }
+
+                p.StartInfo.Arguments = string.Format("\"[{0}].[{1}].[{2}]\" out \"{3}.txt\" -c -S\"{4}\" {5}",
+                                                      db.Name,
+                                                      table.Schema,
+                                                      table.Name,
+                                                      GetScriptFileName(table),
+                                                      db.Parent.Name,
+                                                      credentials);
+
+                p.StartInfo.FileName = "bcp.exe";
+                p.StartInfo.WorkingDirectory = dataDirectory;
+                p.StartInfo.UseShellExecute = false;
+                p.StartInfo.RedirectStandardOutput = true;
+                if (verbose) Console.WriteLine("bcp.exe {0}", p.StartInfo.Arguments);
+                p.Start();
+                string output = p.StandardOutput.ReadToEnd();
+                p.WaitForExit();
+                if (verbose) Console.WriteLine(output);
+            }
+        }
+
+        private bool MatchesTableDataFilters(string databaseName, string tableName)
+        {
+            if(TableDataFilter.Length == 0 && DatabaseTableDataFilter == null)
+            {
+                return true;
+            }
+
+            databaseName = databaseName.ToUpperInvariant();
+            tableName = tableName.ToUpperInvariant();
+
+            if(Array.IndexOf(TableDataFilter, tableName) >= 0)
+            {
+                return true;
+            }
+            if (DatabaseTableDataFilter.ContainsKey(databaseName) && (DatabaseTableDataFilter[databaseName].Contains(tableName) || DatabaseTableDataFilter[databaseName].Contains("*")))
+            {
+                return true;
+            }
+            return false;
         }
 
         private void ScriptAssemblies(bool verbose, Database db, ScriptingOptions so, string outputDirectory)
@@ -444,7 +542,7 @@ GO
                 {
                     if (!FilterExists() || Array.IndexOf(_SprocsFilter, smo.Name) >= 0)
                     {
-                        using (StreamWriter sw = GetStreamWriter(Path.Combine(sprocs, FixUpFileName(smo.Name) + ".sql"), false))
+                        using (StreamWriter sw = GetStreamWriter(Path.Combine(sprocs, GetScriptFileName(smo)), false))
                         {
                             if (verbose) Console.WriteLine("{0} Scripting {1}", db.Name, smo.Name);
                             if (_ScriptAsCreate)
@@ -472,7 +570,7 @@ GO
                 }
                 else
                 {
-                    if (verbose) Console.WriteLine("skipping system object {0}", smo.Name);
+                    //if (verbose) Console.WriteLine("skipping system object {0}", smo.Name);
                 }
             }
         }
@@ -488,7 +586,7 @@ GO
                 {
                     if (!FilterExists() || Array.IndexOf(_ViewsFilter, smo.Name) >= 0)
                     {
-                        using (StreamWriter sw = GetStreamWriter(Path.Combine(views, FixUpFileName(smo.Name) + ".sql"), false))
+                        using (StreamWriter sw = GetStreamWriter(Path.Combine(views, GetScriptFileName(smo)), false))
                         {
                             if (verbose) Console.WriteLine("{0} Scripting {1}", db.Name, smo.Name);
                             if (!_CreateOnly)
@@ -504,11 +602,16 @@ GO
                                 ScriptProperties((IExtendedProperties)smo, sw);
                             }
                         }
+
+                        if (db.Version >= 8 && db.CompatibilityLevel >= CompatibilityLevel.Version80)
+                        {
+                            ScriptIndexes(smo, verbose, db, so, views);
+                        }
                     }
                 }
                 else
                 {
-                    if (verbose) Console.WriteLine("skipping system object {0}", smo.Name);
+                    //if (verbose) Console.WriteLine("skipping system object {0}", smo.Name);
                 }
             }
         }
@@ -528,7 +631,7 @@ GO
                 {
                     if (!FilterExists() || Array.IndexOf(_UdfsFilter, smo.Name) >= 0)
                     {
-                        using (StreamWriter sw = GetStreamWriter(Path.Combine(udfs, FixUpFileName(smo.Name) + ".sql"), false))
+                        using (StreamWriter sw = GetStreamWriter(Path.Combine(udfs, GetScriptFileName(smo)), false))
                         {
                             if (verbose) Console.WriteLine("{0} Scripting {1}", db.Name, smo.Name);
                             if (!_CreateOnly)
@@ -548,7 +651,7 @@ GO
                 }
                 else
                 {
-                    if (verbose) Console.WriteLine("skipping system object {0}", smo.Name);
+                    //if (verbose) Console.WriteLine("skipping system object {0}", smo.Name);
                 }
             }
         }
@@ -564,7 +667,7 @@ GO
             {
                 if (!FilterExists() || Array.IndexOf(_UdtsFilter, smo.Name) >= 0)
                 {
-                    using (StreamWriter sw = GetStreamWriter(Path.Combine(types, FixUpFileName(smo.Name) + ".sql"), false))
+                    using (StreamWriter sw = GetStreamWriter(Path.Combine(types, GetScriptFileName(smo)), false))
                     {
                         if (verbose) Console.WriteLine("{0} Scripting {1}", db.Name, smo.Name);
                         if (!_CreateOnly)
@@ -595,7 +698,7 @@ GO
             {
                 if (!FilterExists() || Array.IndexOf(_UddtsFilter, smo.Name) >= 0)
                 {
-                    using (StreamWriter sw = GetStreamWriter(Path.Combine(types, FixUpFileName(smo.Name) + ".sql"), false))
+                    using (StreamWriter sw = GetStreamWriter(Path.Combine(types, GetScriptFileName(smo)), false))
                     {
                         if (verbose) Console.WriteLine("{0} Scripting {1}", db.Name, smo.Name);
                         if (!_CreateOnly)
@@ -627,7 +730,7 @@ GO
             {
                 if (!FilterExists() || Array.IndexOf(_RulesFilter, smo.Name) >= 0)
                 {
-                    using (StreamWriter sw = GetStreamWriter(Path.Combine(rules, FixUpFileName(smo.Name) + ".sql"), false))
+                    using (StreamWriter sw = GetStreamWriter(Path.Combine(rules, GetScriptFileName(smo)), false))
                     {
                         if (verbose) Console.WriteLine("{0} Scripting {1}", db.Name, smo.Name);
                         if (!_CreateOnly)
@@ -658,9 +761,7 @@ GO
             {
                 if (!FilterExists() || Array.IndexOf(_DefaultsFilter, smo.Name) >= 0)
                 {
-                    using (
-                        StreamWriter sw =
-                            GetStreamWriter(Path.Combine(defaults, FixUpFileName(smo.Name) + ".sql"), false))
+                    using (StreamWriter sw = GetStreamWriter(Path.Combine(defaults, GetScriptFileName(smo)), false))
                     {
                         if (verbose) Console.WriteLine("{0} Scripting {1}", db.Name, smo.Name);
                         if (!_CreateOnly)
@@ -766,6 +867,89 @@ GO
             }
         }
 
+        // TODO:
+        // Add a timeout?
+        // Do something special on command failure?
+        private static void RunCommand(string command, bool verbose, string outputDirectory, string serverName, string databaseName)
+        {
+            string filename, arguments;
+            if (ParseCommand(command, outputDirectory, serverName, databaseName, out filename, out arguments))
+            {
+                if (verbose) Console.WriteLine("Running command: " + filename + " " + arguments);
+                RunAndWait(filename, arguments);
+            }
+        }
+
+        private static bool ParseCommand(string postScriptingCommand, string outputDirectory, string serverName, string databaseName, out string filename, out string arguments)
+        {
+            filename = string.Empty;
+            arguments = string.Empty;
+
+            if(postScriptingCommand == null)
+            {
+                return false;
+            }
+            var command = postScriptingCommand.Trim();
+            if(string.IsNullOrEmpty(command))
+            {
+                return false;
+            }
+
+            command = command.Replace("{path}", outputDirectory);
+            command = command.Replace("{server}", serverName);
+            command = command.Replace("{database}", databaseName);
+            command = command.Replace("{serverclean}", FixUpFileName(serverName));
+            command = command.Replace("{databaseclean}", FixUpFileName(databaseName));
+
+            if (command.StartsWith("\""))
+            {
+                var secondQuotePosition = command.IndexOf('"', 1);
+                if(secondQuotePosition > -1)
+                {
+                    filename = command.Substring(1, secondQuotePosition - 1);
+                    arguments = command.Substring(secondQuotePosition + 1);
+                }
+                else
+                {
+                    filename = command;
+                }
+            }
+            if(string.IsNullOrEmpty(filename))
+            {
+                var spacePosition = command.IndexOf(' ');
+                if(spacePosition > -1)
+                {
+                    filename = command.Substring(0, spacePosition);
+                    arguments = command.Substring(spacePosition + 1);
+                }
+                else
+                {
+                    filename = command;
+                }
+            }
+            return true;
+        }
+
+        private static void RunAndWait(string filename, string arguments)
+        {
+            var process = new Process
+            {
+                StartInfo =
+                {
+                    FileName = filename,
+                    Arguments = arguments,
+                    //CreateNoWindow = true,
+                    UseShellExecute = false, // Share parent console -- http://stackoverflow.com/questions/5094003/net-windowstyle-hidden-vs-createnowindow-true
+                }
+            };
+            process.Start();
+            process.WaitForExit();
+            if(process.ExitCode != 0)
+            {
+                throw new Exception("Command returned error " + process.ExitCode);
+            }
+        }
+
         #endregion
 
         #region Private Utility Functions
@@ -831,8 +1015,24 @@ GO
             return new string(chars, 0, count);
         }
 
-        private string FixUpFileName(string name)
+        public static string GetScriptFileName(ScriptSchemaObjectBase parentObject, NamedSmoObject subObject = null)
         {
+            var scriptFileName = FixUpFileName(parentObject.Schema) + "." + FixUpFileName(parentObject.Name);
+            if (subObject != null)
+            {
+                scriptFileName += "." + FixUpFileName(subObject.Name);
+            }
+            scriptFileName += ".sql";
+            return scriptFileName;
+        }
+
+        public static string FixUpFileName(string name)
+        {
+            if(string.IsNullOrEmpty(name))
+            {
+                return name;
+            }
+
             return name
                 .Replace("[", ".")
                 .Replace("]", ".")
@@ -888,6 +1088,33 @@ GO
             return new StreamWriter(Path, Append);
         }
 
+        public static void PurgeDirectory(string DirName, string FileSpec)
+        {
+            string FullPath = Path.GetFullPath(DirName);
+            try
+            {
+                //s = string.Format(@"/c rmdir ""{0}"" /s /q", Path.GetFullPath(outputDirectory));
+                //System.Diagnostics.Process.Start(@"c:\windows\system32\cmd.exe", s);
+
+                // Remove flags from all files in the current directory
+                foreach (string s in Directory.GetFiles(FullPath, FileSpec, SearchOption.AllDirectories))
+                {
+                    // skip files inside .svn folders (although these might be skipped regardless
+                    // since they have a hidden attribute) 
+                    if (!s.Contains(@"\.svn\"))
+                    {
+                        FileInfo file = new FileInfo(s);
+                        file.Attributes = FileAttributes.Normal;
+                        file.Delete();
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Exception {0} : {1}", e.Message, FullPath);
+            };
+        }
+
         #endregion
 
         #region Public Properties
@@ -897,6 +1124,14 @@ GO
             get { return _TableFilter; }
             set { _TableFilter = value; }
         }
+
+        public string[] TableDataFilter
+        {
+            get { return _TableDataFilter; }
+            set { _TableDataFilter = value; }
+        }
+
+        public Dictionary<string, List<string>> DatabaseTableDataFilter { get; set; }
 
         public string[] RulesFilter
         {
@@ -992,6 +1227,22 @@ GO
             get { return _IncludeDatabase; }
             set { _IncludeDatabase = value; }
         }
+        public string PreScriptingCommand
+        {
+            get { return _PreScriptingCommand; }
+            set { _PreScriptingCommand = value; }
+        }
+        public string PostScriptingCommand
+        {
+            get { return _PostScriptingCommand; }
+            set { _PostScriptingCommand = value; }
+        }
+
+        public string StartCommand { get; set; }
+        public string FinishCommand { get; set; }
+
+        public string ConnectionString { get; set; }
+
         #endregion
     }
 }

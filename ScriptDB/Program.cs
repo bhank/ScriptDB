@@ -32,6 +32,8 @@ using System.Collections.Generic;
 using System.Text;
 using System.Data.SqlClient;
 using System.IO;
+using Microsoft.SqlServer.Management.Common;
+using Microsoft.SqlServer.Management.Smo;
 using Utility;
 
 namespace Elsasoft.ScriptDb
@@ -66,11 +68,17 @@ namespace Elsasoft.ScriptDb
                 using (SqlConnection sc = new SqlConnection(connStr))
                 {
                     database = sc.Database;
-                }
 
-                // Purge at the Server level only when we're doing all databases
-                if (Purge && scriptAllDatabases && Directory.Exists(outputDirectory))
-                    PurgeDirectory(outputDirectory, "*.sql");
+                    if (outputDirectory.Contains("{server}") || outputDirectory.Contains("{serverclean}"))
+                    {
+                        var serverConnection = new ServerConnection(sc);
+                        var s = new Server(serverConnection);
+                        outputDirectory = outputDirectory.Replace("{server}", s.Name);
+                        outputDirectory = outputDirectory.Replace("{serverclean}", DatabaseScripter.FixUpFileName(s.Name));
+                        outputDirectory = outputDirectory.Replace("{database}", database);
+                        outputDirectory = outputDirectory.Replace("{databaseclean}", DatabaseScripter.FixUpFileName(database));
+                    }
+                }
 
                 if (!Directory.Exists(outputDirectory)) Directory.CreateDirectory(outputDirectory);
 
@@ -78,6 +86,13 @@ namespace Elsasoft.ScriptDb
 
                 if (arguments["table"] != null)
                     ds.TableFilter = arguments["table"].Split(',');
+                if (arguments["tableData"] != null)
+                    ds.TableDataFilter = arguments["table"].ToUpperInvariant().Split(',');
+                var tableDataFile = arguments["tableDataFile"];
+                if(tableDataFile != null)
+                {
+                    ds.DatabaseTableDataFilter = ReadTableDataFile(tableDataFile);
+                }
                 if (arguments["view"] != null)
                     ds.ViewsFilter = arguments["view"].Split(',');
                 if (arguments["sp"] != null)
@@ -96,6 +111,14 @@ namespace Elsasoft.ScriptDb
                     ds.CreateOnly = true;
                 if (arguments["filename"] != null)
                     ds.OutputFileName = arguments["filename"];
+                if (arguments["StartCommand"] != null)
+                    ds.StartCommand = arguments["StartCommand"];
+                if (arguments["PreScriptingCommand"] != null)
+                    ds.PreScriptingCommand = arguments["PreScriptingCommand"];
+                if (arguments["PostScriptingCommand"] != null)
+                    ds.PostScriptingCommand = arguments["PostScriptingCommand"];
+                if (arguments["FinishCommand"] != null)
+                    ds.FinishCommand = arguments["FinishCommand"];
                 ds.GenerateScripts(connStr, outputDirectory, scriptAllDatabases, Purge, scriptData, verbose, scriptProperties);
             }
             catch (Exception e)
@@ -115,34 +138,23 @@ namespace Elsasoft.ScriptDb
             }
         }
 
-
-        public static void PurgeDirectory(string DirName, string FileSpec)
+        private static Dictionary<string, List<string>> ReadTableDataFile(string tableDataFile)
         {
-            string FullPath = Path.GetFullPath(DirName);
-            try
+            var tablesByDatabase = new Dictionary<string, List<string>>();
+            var lines = File.ReadAllLines(tableDataFile);
+            foreach(var line in lines)
             {
-                //s = string.Format(@"/c rmdir ""{0}"" /s /q", Path.GetFullPath(outputDirectory));
-                //System.Diagnostics.Process.Start(@"c:\windows\system32\cmd.exe", s);
-
-                // Remove flags from all files in the current directory
-                foreach (string s in Directory.GetFiles(FullPath, FileSpec, SearchOption.AllDirectories))
+                if(string.IsNullOrEmpty(line) || line.IndexOf(':') == -1)
                 {
-                    // skip files inside .svn folders (although these might be skipped regardless
-                    // since they have a hidden attribute) 
-                    if (!s.Contains(@"\.svn\"))
-                    {
-                        FileInfo file = new FileInfo(s);
-                        file.Attributes = FileAttributes.Normal;
-                        file.Delete();
-                    }
+                    continue;
                 }
+                var parts = line.Split(new[] {':'}, 2);
+                var databaseName = parts[0].ToUpperInvariant();
+                var tableNames = parts[1].ToUpperInvariant().Split(',');
+                tablesByDatabase.Add(databaseName, new List<string>(tableNames));
             }
-            catch (Exception e)
-            {
-                Console.WriteLine("Exception {0} : {1}", e.Message, FullPath);
-            };
+            return tablesByDatabase;
         }
-
 
 
         private static void PrintHelp()
