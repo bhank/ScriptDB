@@ -35,6 +35,7 @@ using System.Data.SqlClient;
 using System.IO;
 using Microsoft.SqlServer.Management.Common;
 using Microsoft.SqlServer.Management.Smo;
+using ScriptDb;
 using Utility;
 
 namespace Elsasoft.ScriptDb
@@ -54,7 +55,14 @@ namespace Elsasoft.ScriptDb
 
                 string connStr = arguments["con"];
                 string outputDirectory = arguments["outDir"];
-                bool scriptData = arguments["d"] != null;
+                var dataScriptingFormat = DataScriptingFormat.None;
+                if (arguments["d"] != null)
+                {
+                    if (!Enum.TryParse(arguments["d"], true, out dataScriptingFormat))
+                    {
+                        dataScriptingFormat = DataScriptingFormat.Sql;
+                    }
+                }
                 bool verbose = arguments["v"] != null;
                 bool scriptProperties = arguments["p"] != null;
                 bool Purge = arguments["Purge"] != null;
@@ -122,7 +130,7 @@ namespace Elsasoft.ScriptDb
                     ds.FinishCommand = arguments["FinishCommand"];
                 var watch = new Stopwatch();
                 watch.Start();
-                ds.GenerateScripts(connStr, outputDirectory, scriptAllDatabases, Purge, scriptData, verbose, scriptProperties);
+                ds.GenerateScripts(connStr, outputDirectory, scriptAllDatabases, Purge, dataScriptingFormat, verbose, scriptProperties);
                 Console.WriteLine(string.Format("Took {0} ms", watch.ElapsedMilliseconds));
             }
             catch (Exception e)

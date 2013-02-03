@@ -30,6 +30,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Text;
 using System.Collections.Specialized;
 using System.Data.SqlClient;
@@ -38,6 +39,7 @@ using System.Diagnostics;
 
 using Microsoft.SqlServer.Management.Smo;
 using Microsoft.SqlServer.Management.Common;
+using ScriptDb;
 using Utils;
 using Rule = Microsoft.SqlServer.Management.Smo.Rule;
 
@@ -95,7 +97,7 @@ GO
         /// <param name="verbose"></param>
         public void GenerateScripts(string connStr, string outputDirectory,
                                     bool scriptAllDatabases, bool purgeDirectory,
-                                    bool scriptData, bool verbose, bool scriptProperties)
+                                    DataScriptingFormat dataScriptingFormat, bool verbose, bool scriptProperties)
         {
             ConnectionString = connStr;
             SqlConnection connection = new SqlConnection(connStr);
@@ -126,7 +128,7 @@ GO
                     try
                     {
                         RunCommand(PreScriptingCommand, verbose, outputDirectory, s.Name, db.Name);
-                        GenerateDatabaseScript(db, outputDirectory, purgeDirectory, scriptData, verbose, scriptProperties);
+                        GenerateDatabaseScript(db, outputDirectory, purgeDirectory, dataScriptingFormat, verbose, scriptProperties, s);
                         RunCommand(PostScriptingCommand, verbose, outputDirectory, s.Name, db.Name);
                     }
                     catch (Exception e)
@@ -144,7 +146,7 @@ GO
                 }
                 RunCommand(PreScriptingCommand, verbose, outputDirectory, s.Name, db.Name);
                 GenerateDatabaseScript(db, outputDirectory, purgeDirectory,
-                    scriptData, verbose, scriptProperties);
+                    dataScriptingFormat, verbose, scriptProperties, s);
                 RunCommand(PostScriptingCommand, verbose, outputDirectory, s.Name, db.Name);
             }
 
@@ -153,7 +155,7 @@ GO
 
         // TODO: maybe pass in the databaseOutputDirectory instead of calculating it in here?
         private void GenerateDatabaseScript(Database db, string outputDirectory, bool purgeDirectory,
-                           bool scriptData, bool verbose, bool scriptProperties)
+                           DataScriptingFormat dataScriptingFormat, bool verbose, bool scriptProperties, Server server)
         {
             this._ScriptProperties = scriptProperties;
 
@@ -182,7 +184,7 @@ GO
             so.NoCollation = _NoCollation;
             so.IncludeDatabaseContext = _IncludeDatabase;
 
-            ScriptTables(verbose, db, so, databaseOutputDirectory, scriptData);
+            ScriptTables(verbose, db, so, databaseOutputDirectory, dataScriptingFormat, server);
             ScriptDefaults(verbose, db, so, databaseOutputDirectory);
             ScriptRules(verbose, db, so, databaseOutputDirectory);
             ScriptUddts(verbose, db, so, databaseOutputDirectory);
@@ -239,7 +241,7 @@ GO
             }
         }
 
-        private void ScriptTables(bool verbose, Database db, ScriptingOptions so, string outputDirectory, bool scriptData)
+        private void ScriptTables(bool verbose, Database db, ScriptingOptions so, string outputDirectory, DataScriptingFormat dataScriptingFormat, Server server)
         {
             string data = Path.Combine(outputDirectory, "Data");
             string tables = Path.Combine(outputDirectory, "Tables");
@@ -361,9 +363,9 @@ GO
 
                         #region Script Data
 
-                        if (scriptData && MatchesTableDataFilters(db.Name, table.Name))
+                        if (dataScriptingFormat != DataScriptingFormat.None && MatchesTableDataFilters(db.Name, table.Name))
                         {
-                            ScriptTableData(db, table, verbose, data);
+                            ScriptTableData(db, table, verbose, data, dataScriptingFormat, server);
                         }
 
                         #endregion
@@ -376,9 +378,42 @@ GO
             }
         }
 
-        private void ScriptTableData(Database db, Table table, bool verbose, string dataDirectory)
+        private void ScriptTableData(Database db, Table table, bool verbose, string dataDirectory, DataScriptingFormat dataScriptingFormat, Server server)
         {
-            ScriptTableDataToCsv(db, table, verbose, dataDirectory);
+            if ((dataScriptingFormat & DataScriptingFormat.Sql) == DataScriptingFormat.Sql)
+            {
+                ScriptTableDataNative(db, table, verbose, dataDirectory, server);
+            }
+            if ((dataScriptingFormat & DataScriptingFormat.Csv) == DataScriptingFormat.Csv)
+            {
+                ScriptTableDataToCsv(db, table, verbose, dataDirectory);
+            }
+            if ((dataScriptingFormat & DataScriptingFormat.Bcp) == DataScriptingFormat.Bcp)
+            {
+                ScriptTableDataWithBcp(db, table, verbose, dataDirectory);
+            }
+        }
+
+        private void ScriptTableDataNative(Database db, Table table, bool verbose, string dataDirectory, Server server)
+        {
+            if (!Directory.Exists(dataDirectory)) Directory.CreateDirectory(dataDirectory);
+            var fileName = Path.ChangeExtension(Path.Combine(dataDirectory, GetScriptFileName(table)), "sql");
+
+            var scripter = new Scripter(server)
+            {
+                Options =
+                {
+                    ScriptData = true,
+                    ScriptSchema = false
+                }
+            };
+            using (TextWriter writer = new StreamWriter(fileName))
+            {
+                foreach (var script in scripter.EnumScript(new[] { table }))
+                {
+                    writer.WriteLine(script);
+                }
+            }
         }
 
         private void ScriptTableDataToCsv(Database db, Table table, bool verbose, string dataDirectory)
@@ -413,6 +448,7 @@ GO
         private void ScriptTableDataWithBcp(Database db, Table table, bool verbose, string dataDirectory)
         {
             if (!Directory.Exists(dataDirectory)) Directory.CreateDirectory(dataDirectory);
+            var fileName = Path.ChangeExtension(Path.Combine(dataDirectory, GetScriptFileName(table)), "txt");
 
             using (Process p = new Process())
             {
@@ -424,11 +460,11 @@ GO
                     credentials = string.Format("-U \"{0}\" -P \"{1}\"", builder.UserID, builder.Password);
                 }
 
-                p.StartInfo.Arguments = string.Format("\"[{0}].[{1}].[{2}]\" out \"{3}.txt\" -c -S\"{4}\" {5}",
+                p.StartInfo.Arguments = string.Format("\"[{0}].[{1}].[{2}]\" out \"{3}\" -c -S\"{4}\" {5}",
                                                       db.Name,
                                                       table.Schema,
                                                       table.Name,
-                                                      GetScriptFileName(table),
+                                                      fileName,
                                                       db.Parent.Name,
                                                       credentials);
 
@@ -1093,15 +1129,12 @@ GO
             string FullPath = Path.GetFullPath(DirName);
             try
             {
-                //s = string.Format(@"/c rmdir ""{0}"" /s /q", Path.GetFullPath(outputDirectory));
-                //System.Diagnostics.Process.Start(@"c:\windows\system32\cmd.exe", s);
-
-                // Remove flags from all files in the current directory
-                foreach (string s in Directory.GetFiles(FullPath, FileSpec, SearchOption.AllDirectories))
+                var extensionsToPurge = new[] {".sql", ".csv", ".txt"};
+                foreach (var s in Directory.EnumerateFiles(FullPath, "*", SearchOption.AllDirectories).Where(f => extensionsToPurge.Contains(Path.GetExtension(f).ToLowerInvariant())))
                 {
-                    // skip files inside .svn folders (although these might be skipped regardless
+                    // skip files inside .svn and .git folders (although these might be skipped regardless
                     // since they have a hidden attribute) 
-                    if (!s.Contains(@"\.svn\"))
+                    if (!s.Contains(@"\.svn\") && !s.Contains(@"\.git\"))
                     {
                         FileInfo file = new FileInfo(s);
                         file.Attributes = FileAttributes.Normal;

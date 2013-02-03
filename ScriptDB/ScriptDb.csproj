@@ -80,6 +80,7 @@
     <Compile Include="CsvReader.cs" />
     <Compile Include="CsvWriter.cs" />
     <Compile Include="DatabaseScripter.cs" />
+    <Compile Include="DataScriptingFormat.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
