@@ -1072,7 +1072,7 @@ GO
             return name
                 .Replace("[", ".")
                 .Replace("]", ".")
-                .Replace(" ", ".")
+                //.Replace(" ", ".")
                 .Replace("&", ".")
                 .Replace("'", ".")
                 .Replace("\"", ".")
