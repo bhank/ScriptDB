@@ -29,6 +29,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using System.Data.SqlClient;
 using System.IO;
@@ -119,7 +120,10 @@ namespace Elsasoft.ScriptDb
                     ds.PostScriptingCommand = arguments["PostScriptingCommand"];
                 if (arguments["FinishCommand"] != null)
                     ds.FinishCommand = arguments["FinishCommand"];
+                var watch = new Stopwatch();
+                watch.Start();
                 ds.GenerateScripts(connStr, outputDirectory, scriptAllDatabases, Purge, scriptData, verbose, scriptProperties);
+                Console.WriteLine(string.Format("Took {0} ms", watch.ElapsedMilliseconds));
             }
             catch (Exception e)
             {

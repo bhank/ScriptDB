@@ -158,7 +158,7 @@ GO
             this._ScriptProperties = scriptProperties;
 
             // Output folder
-            var databaseOutputDirectory = Path.Combine(outputDirectory, db.Name);
+            var databaseOutputDirectory = Path.Combine(outputDirectory, FixUpFileName(db.Name));
             if (Directory.Exists(databaseOutputDirectory))
             {
                 if (purgeDirectory)
