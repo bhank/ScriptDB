@@ -175,38 +175,64 @@ namespace Elsasoft.ScriptDb
 @"ScriptDb.exe usage:
 
 ScriptDb.exe 
-    ConnectionString 
-    OutputDirectory
-    [-d]
+    -con:<ConnectionString>
+    -outdir:<OutputDirectory>
+    [-d[:<sql,csv,bcp>]]
     [-v]
     [-p]
     [-table:table1,table2] [-TableOneFile] 
+    [-tableDataFile:<TableDataFileName>]
     [-view:view1,view2] 
     [-sp:sp1,sp2] 
     [-ScriptAsCreate] 
     [-ScriptAllDatabases]
+    [-IncludeDatabase]
     [-Permissions] 
     [-NoCollation]
     [-CreateOnly]
     [-Purge]
     [-filename:<FileName> | -]
+    [-StartCommand:<command>]
+    [-FinishCommand:<command>]
+    [-PreScriptingCommand:<command>]
+    [-PostScriptingCommand:<command>]
 
 -con:<ConnectionString> is a connection string to the db.
 -outDir:<OutputDirectory> is where the output scripts are placed.
--d script data to files for importing with bcp
+-d script data to files in formats sql (default), csv, and/or bcp
 -v for verbose output.
 -p to script extended properties for each object.
 -table - comma separated list of tables to script
 -TableOneFile - script table definition into one file instad of multiple
+-tableDataFile - text file of tables to script
+    with lines of format databasename:{table1,table2|*}
 -view - comma separated list of views to script
 -sp - comma separated list of stored procedures to script
 -ScriptAsCreate - script stored procedures as CREATE instead ALTER
 -ScriptAllDatabases - script all databases on the current server
 -IncludeDatabase - Include Database Context in scripted objects
+-Permissions - script permissions
+-NoCollation - skip the collation clause in the script
 -CreateOnly - Do not generate DROP statements
--Purge - ensures output folder is emptied of all files before generating scripts
--filename - specify output filename. If file exists, script will be appended to the end of the file
-           specify '-' to output to console
+-Purge - delete files from output folder before generating scripts
+-filename - specify output filename. If file exists,
+    script will be appended to the end of the file
+    specify '-' to output to console
+
+Commands to run:
+-StartCommand - at startup
+-FinishCommand - before shutdown
+-PreScriptingCommand - before scripting one database
+-PostScriptingCommand - after scripting one database
+Commands can include these tokens:
+{path} - the output directory
+{server} - the SQL server name
+{serverclean} - same as above, but safe for use as a filename
+{database} - the database name
+{databaseclean} - same as above, but safe for use as a filename
+The -outDir parameter can also use all these tokens except {path}.
+{database} is meaningful in StartCommand, FinishCommand and outDir only when
+just a single database is specified in the connection string to be scripted.
 
 Example: 
 
