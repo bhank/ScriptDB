@@ -12,6 +12,15 @@ Highlights of my version:
 
 The most significant change is the ability to run commands. This allows you to do things like scripting databases directly into source control with a single command.
 
+Scripting a single database:
+
+    scriptdb.exe -Purge -con:server=(local);database=Northwind;trusted_connection=yes -outDir:scripts -d -TableOneFile -Permissions -IncludeDatabase
+
+Using it along with https://github.com/bhank/SVNCompleteSync to script all databases on a server to SVN:
+
+    scriptdb.exe -TableOneFile -Purge -ScriptAllDatabases -d -Permissions -tableDataFile:ScriptDataTables.txt -con:server=(local);trusted_connection=yes -outDir:scripts\{serverclean} -StartCommand="svnclient.exe checkoutupdate \"https://svnserver/svn/Databases/{serverclean}\" \"{path}\" --mkdir --message=\"Adding server {server}\" --cleanworkingcopy --verbose --username=svnuser --password=svnpass --trust-server-cert" -PreScriptingCommand="cmd /c now.exe Scripting {database} & exit /b 0" -PostScriptingCommand="svnclient.exe completesync --message=\"Updating {database} on {server}\" \"{path}\{databaseclean}\" --verbose --username=svnuser --password=svnpass --trust-server-cert"
+
+
 -Adam Coyne
 
 ```
