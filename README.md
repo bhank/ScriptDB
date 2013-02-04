@@ -3,6 +3,8 @@ ScriptDB
 
 ScriptDb is a C# console app that uses SQL Management Objects (SMO) to script database objects. It was originally written by Jesse Hersch of http://www.elsasoft.org (see his copyright information below). His version is hosted at http://scriptdb.codeplex.com/ .
 
+A binary is available at http://www.coyne.nu/tools/scriptdb.html .
+
 Highlights of my version:
 * script table data to sql (INSERT statements), csv (using http://www.heikniemi.fi/jhlib/), or bcp (with fixed authentication)
 * specify tables for which to script data on the command line or in a file
