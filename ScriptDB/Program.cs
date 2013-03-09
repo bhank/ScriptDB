@@ -114,6 +114,8 @@ namespace Elsasoft.ScriptDb
                     ds.Permissions = true;
                 if (arguments["NoCollation"] != null)
                     ds.NoCollation = true;
+                if (arguments["Statistics"] != null)
+                    ds.Statistics = true;
                 if (arguments["IncludeDatabase"] != null)
                     ds.IncludeDatabase = true;
                 if (arguments["CreateOnly"] != null)
@@ -188,6 +190,7 @@ ScriptDb.exe
     [-ScriptAllDatabases]
     [-IncludeDatabase]
     [-Permissions] 
+    [-Statistics]
     [-NoCollation]
     [-CreateOnly]
     [-Purge]
@@ -212,6 +215,7 @@ ScriptDb.exe
 -ScriptAllDatabases - script all databases on the current server
 -IncludeDatabase - Include Database Context in scripted objects
 -Permissions - script permissions
+-Statistics - script statistics
 -NoCollation - skip the collation clause in the script
 -CreateOnly - Do not generate DROP statements
 -Purge - delete files from output folder before generating scripts

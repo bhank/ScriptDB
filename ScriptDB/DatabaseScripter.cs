@@ -72,6 +72,7 @@ GO
         private bool _ScriptAsCreate = false;
         private bool _Permissions = false;
         private bool _NoCollation = false;
+        private bool _Statistics = false;
         private bool _IncludeDatabase;
         private bool _CreateOnly = false;
         private bool _ScriptProperties = false;
@@ -182,6 +183,7 @@ GO
             so.Bindings = true;
             so.Permissions = _Permissions;
             so.NoCollation = _NoCollation;
+            so.Statistics = _Statistics;
             so.IncludeDatabaseContext = _IncludeDatabase;
 
             ScriptTables(verbose, db, so, databaseOutputDirectory, dataScriptingFormat, server);
@@ -1242,6 +1244,12 @@ GO
         {
             get { return _NoCollation; }
             set { _NoCollation = value; }
+        }
+
+        public bool Statistics
+        {
+            get { return _Statistics; }
+            set { _Statistics = value; }
         }
 
         public bool CreateOnly
