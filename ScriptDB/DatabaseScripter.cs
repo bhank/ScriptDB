@@ -250,6 +250,7 @@ GO
             string programmability = Path.Combine(outputDirectory, "Programmability");
             string constraints = Path.Combine(tables, "Constraints");
             string foreignKeys = Path.Combine(tables, "ForeignKeys");
+            string fullTextIndexes = Path.Combine(tables, "FullTextIndexes");
             string triggers = Path.Combine(programmability, "Triggers");
 
             //            if (!Directory.Exists(tables)) Directory.CreateDirectory(tables);
@@ -320,6 +321,26 @@ GO
 
                         ScriptIndexes(table, verbose, db, so, tables);
 
+                        #region Full Text Indexes
+
+                        if (table.FullTextIndex != null)
+                        {
+                            if (!_TableOneFile)
+                                FileName = Path.Combine(fullTextIndexes, GetScriptFileName(table));
+                            using (StreamWriter sw = GetStreamWriter(FileName, _TableOneFile))
+                            {
+                                if (verbose) Console.WriteLine("{0} Scripting full-text index for {1}", db.Name, table.Name);
+                                if (!_CreateOnly)
+                                {
+                                    so.ScriptDrops = so.IncludeIfNotExists = true;
+                                    WriteScript(table.FullTextIndex.Script(so), sw);
+                                }
+                                so.ScriptDrops = so.IncludeIfNotExists = false;
+                                WriteScript(table.FullTextIndex.Script(so), sw);
+                            }
+                        }
+
+                        #endregion
                         #region Foreign Keys
 
                         foreach (ForeignKey smo in table.ForeignKeys)
