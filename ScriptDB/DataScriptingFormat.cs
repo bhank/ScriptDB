@@ -9,5 +9,6 @@ namespace ScriptDb
         Sql = 1,
         Csv = 2,
         Bcp = 4,
+        All = Sql | Csv | Bcp,
     }
 }
