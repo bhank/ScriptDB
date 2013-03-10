@@ -107,8 +107,6 @@ namespace ScriptDb
 
         private static void ShowUsage(OptionSet optionSet)
         {
-            // TODO: describe substitution tokens
-
             //var commands = new List<string>(Enum.GetNames(typeof(Command)));
             //commands.RemoveAt(0);
 
@@ -117,6 +115,17 @@ namespace ScriptDb
             //Console.Error.WriteLine(string.Format("{0} {1} PATH [options]", exeName, Command.CompleteSync));
             //Console.Error.WriteLine(string.Format("{0} {1} URL PATH [options]", exeName, Command.CheckoutUpdate));
             optionSet.WriteOptionDescriptions(Console.Error);
+            Console.Error.WriteLine(@"
+Commands can include these tokens:
+{path} - the output directory
+{server} - the SQL server name
+{serverclean} - same as above, but safe for use as a filename
+{database} - the database name
+{databaseclean} - same as above, but safe for use as a filename
+The outDir parameter can also use all these tokens except {path}.
+{database} is meaningful in StartCommand, FinishCommand and outDir only when
+just a single database is specified in the connection string to be scripted.
+");
         }
     }
 
