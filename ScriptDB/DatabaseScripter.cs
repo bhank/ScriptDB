@@ -243,7 +243,7 @@ GO
             {
                 if (!table.IsSystemObject)
                 {
-                    if (!FilterExists() || Array.IndexOf(TableFilter, table.Name) >= 0)
+                    if (!FilterExists() || Array.IndexOf(TableFilter, table.Name.ToUpperInvariant()) >= 0)
                     {
                         string FileName = Path.Combine(tables, GetScriptFileName(table));
                         #region Table Definition
@@ -575,7 +575,7 @@ GO
             {
                 if (!smo.IsSystemObject && !smo.IsEncrypted)
                 {
-                    if (!FilterExists() || Array.IndexOf(SprocsFilter, smo.Name) >= 0)
+                    if (!FilterExists() || Array.IndexOf(SprocsFilter, smo.Name.ToUpperInvariant()) >= 0)
                     {
                         using (StreamWriter sw = GetStreamWriter(Path.Combine(sprocs, GetScriptFileName(smo)), false))
                         {
@@ -619,7 +619,7 @@ GO
             {
                 if (!smo.IsSystemObject && !smo.IsEncrypted)
                 {
-                    if (!FilterExists() || Array.IndexOf(ViewsFilter, smo.Name) >= 0)
+                    if (!FilterExists() || Array.IndexOf(ViewsFilter, smo.Name.ToUpperInvariant()) >= 0)
                     {
                         using (StreamWriter sw = GetStreamWriter(Path.Combine(views, GetScriptFileName(smo)), false))
                         {
@@ -664,7 +664,7 @@ GO
 
                 if (!smo.IsSystemObject && !smo.IsEncrypted)
                 {
-                    if (!FilterExists() || Array.IndexOf(UdfsFilter, smo.Name) >= 0)
+                    if (!FilterExists() || Array.IndexOf(UdfsFilter, smo.Name.ToUpperInvariant()) >= 0)
                     {
                         using (StreamWriter sw = GetStreamWriter(Path.Combine(udfs, GetScriptFileName(smo)), false))
                         {
@@ -700,7 +700,7 @@ GO
 
             foreach (UserDefinedType smo in db.UserDefinedTypes)
             {
-                if (!FilterExists() || Array.IndexOf(UdtsFilter, smo.Name) >= 0)
+                if (!FilterExists() || Array.IndexOf(UdtsFilter, smo.Name.ToUpperInvariant()) >= 0)
                 {
                     using (StreamWriter sw = GetStreamWriter(Path.Combine(types, GetScriptFileName(smo)), false))
                     {
@@ -731,7 +731,7 @@ GO
 
             foreach (UserDefinedDataType smo in db.UserDefinedDataTypes)
             {
-                if (!FilterExists() || Array.IndexOf(UddtsFilter, smo.Name) >= 0)
+                if (!FilterExists() || Array.IndexOf(UddtsFilter, smo.Name.ToUpperInvariant()) >= 0)
                 {
                     using (StreamWriter sw = GetStreamWriter(Path.Combine(types, GetScriptFileName(smo)), false))
                     {
@@ -763,7 +763,7 @@ GO
 
             foreach (Rule smo in db.Rules)
             {
-                if (!FilterExists() || Array.IndexOf(RulesFilter, smo.Name) >= 0)
+                if (!FilterExists() || Array.IndexOf(RulesFilter, smo.Name.ToUpperInvariant()) >= 0)
                 {
                     using (StreamWriter sw = GetStreamWriter(Path.Combine(rules, GetScriptFileName(smo)), false))
                     {
@@ -794,7 +794,7 @@ GO
 
             foreach (Default smo in db.Defaults)
             {
-                if (!FilterExists() || Array.IndexOf(DefaultsFilter, smo.Name) >= 0)
+                if (!FilterExists() || Array.IndexOf(DefaultsFilter, smo.Name.ToUpperInvariant()) >= 0)
                 {
                     using (StreamWriter sw = GetStreamWriter(Path.Combine(defaults, GetScriptFileName(smo)), false))
                     {
@@ -825,7 +825,7 @@ GO
 
             foreach (DatabaseDdlTrigger smo in db.Triggers)
             {
-                if (!FilterExists() || Array.IndexOf(DdlTriggersFilter, smo.Name) >= 0)
+                if (!FilterExists() || Array.IndexOf(DdlTriggersFilter, smo.Name.ToUpperInvariant()) >= 0)
                 {
                     using (StreamWriter sw = GetStreamWriter(Path.Combine(triggers, FixUpFileName(smo.Name) + ".sql"), false))
                     {
@@ -869,7 +869,7 @@ GO
                     smo.Name == "INFORMATION_SCHEMA" ||
                     smo.Name == "guest") continue;
 
-                if (!FilterExists() || Array.IndexOf(SchemasFilter, smo.Name) >= 0)
+                if (!FilterExists() || Array.IndexOf(SchemasFilter, smo.Name.ToUpperInvariant()) >= 0)
                 {
                     using (StreamWriter sw = GetStreamWriter(Path.Combine(schemas, FixUpFileName(smo.Name) + ".sql"), false))
                     {

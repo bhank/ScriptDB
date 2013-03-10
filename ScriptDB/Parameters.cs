@@ -66,11 +66,11 @@ namespace ScriptDb
                             Enum.TryParse(v, true, out d);
                             p.DataScriptingFormat |= d; // Specify multiple formats in separate parameters
                         }},
-                    {"tabledata=", "{NAME} of tables for which to script data in formats specified by -d. (Default all)", v => p.TableFilter.AddRange(v.SplitListParameter())},
+                    {"tabledata=", "{NAME} of tables for which to script data in formats specified by -d. (Default all)", v => p.TableFilter.AddRange(v.SplitUpperCaseListParameter())},
                     {"tabledatafile=", "{FILENAME} containing tables for which to script data for each database name. File format:\ndatabase:table1,table2,table3", v => p.TableDataFilterFile = v},
-                    {"table=", "{NAME} of tables for which to script schema. (Default all)", v => p.TableFilter.AddRange(v.SplitListParameter())},
-                    {"view=", "{NAME} of views for which to script schema. (Default all)", v => p.ViewFilter.AddRange(v.SplitListParameter())},
-                    {"sp|storedprocedure=", "{NAME} of stored procedures for which to script schema. (Default all)", v => p.StoredProcedureFilter.AddRange(v.SplitListParameter())},
+                    {"table=", "{NAME} of tables for which to script schema. (Default all)", v => p.TableFilter.AddRange(v.SplitUpperCaseListParameter())},
+                    {"view=", "{NAME} of views for which to script schema. (Default all)", v => p.ViewFilter.AddRange(v.SplitUpperCaseListParameter())},
+                    {"sp|storedprocedure=", "{NAME} of stored procedures for which to script schema. (Default all)", v => p.StoredProcedureFilter.AddRange(v.SplitUpperCaseListParameter())},
                     {"tableonefile", "Script all parts of a table to a single file.", v => p.TableOneFile = (v != null)},
                     {"scriptascreate|scriptstoredproceduresascreate", "Script stored procedures as CREATE instead of ALTER.", v => p.ScriptAsCreate = (v != null)},
                     {"createonly", "Do not generate DROP statements.", v => p.ScriptCreateOnly = (v != null)},
@@ -127,13 +127,13 @@ namespace ScriptDb
 
     public static class ParameterExtensions
     {
-        public static IEnumerable<string> SplitListParameter(this string s)
+        public static IEnumerable<string> SplitUpperCaseListParameter(this string s)
         {
             if (s == null)
             {
                 return Enumerable.Empty<string>();
             }
-            return s.Split(',');
+            return s.ToUpperInvariant().Split(',');
         }
     }
 }
