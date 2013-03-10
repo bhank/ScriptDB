@@ -79,12 +79,11 @@ namespace Elsasoft.ScriptDb
         /// <param name="scriptAllDatabases"></param>
         /// <param name="purgeDirectory"></param>
         /// <param name="scriptProperties"></param>
-        public void GenerateScripts(string connStr, string outputDirectory,
+        public void GenerateScripts(string outputDirectory,
                                     bool scriptAllDatabases, bool purgeDirectory,
                                     DataScriptingFormat dataScriptingFormat, bool verbose, bool scriptProperties)
         {
-            ConnectionString = connStr;
-            var connection = new SqlConnection(connStr);
+            var connection = new SqlConnection(ConnectionString);
             var sc = new ServerConnection(connection);
             var s = new Server(sc);
 
@@ -463,7 +462,7 @@ namespace Elsasoft.ScriptDb
                                                       credentials);
 
                 p.StartInfo.FileName = "bcp.exe";
-                p.StartInfo.WorkingDirectory = dataDirectory;
+                //p.StartInfo.WorkingDirectory = dataDirectory;
                 p.StartInfo.UseShellExecute = false;
                 p.StartInfo.RedirectStandardOutput = true;
                 if (verbose) Console.WriteLine("bcp.exe {0}", p.StartInfo.Arguments);

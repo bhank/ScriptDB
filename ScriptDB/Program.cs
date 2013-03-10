@@ -72,6 +72,7 @@ namespace Elsasoft.ScriptDb
 
                 var ds = new DatabaseScripter();
 
+                ds.ConnectionString = connectionString;
                 ds.TableFilter = parameters.TableFilter.ToArray();
                 ds.TableDataFilter = parameters.TableDataFilter.ToArray();
                 var tableDataFile = parameters.TableDataFilterFile;
@@ -95,7 +96,7 @@ namespace Elsasoft.ScriptDb
                 ds.FinishCommand = parameters.FinishCommand;
                 var watch = new Stopwatch();
                 watch.Start();
-                ds.GenerateScripts(connectionString, outputDirectory, parameters.ScriptAllDatabases, parameters.Purge, parameters.DataScriptingFormat, parameters.Verbose, parameters.ScriptProperties);
+                ds.GenerateScripts(outputDirectory, parameters.ScriptAllDatabases, parameters.Purge, parameters.DataScriptingFormat, parameters.Verbose, parameters.ScriptProperties);
                 Console.WriteLine("Took {0} ms", watch.ElapsedMilliseconds);
             }
             catch (Exception e)

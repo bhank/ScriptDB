@@ -65,13 +65,20 @@ namespace ScriptDb
                     {"v|verbose", "Show verbose messages.", v => p.Verbose = (v != null)},
                     {"purge", "Delete files from output directory before scripting.", v => p.Purge = (v != null)},
                     {"includedatabase|scriptdatabase", "Script the database itself.", v => p.ScriptDatabase = (v != null)},
-                    {"dataformat|tabledataformat=", "The {FORMAT} in which to script data to files. SQL (default), CSV, and/or BCP.", v =>
+                    {"scriptdata:", "Script table data, optionally specifying the {FORMAT}: SQL (default), CSV, and/or BCP.", v =>
                         {
-                            DataScriptingFormat d;
-                            Enum.TryParse(v, true, out d);
-                            p.DataScriptingFormat |= d; // Specify multiple formats in separate parameters
+                            if (v == null)
+                            {
+                                p.DataScriptingFormat = DataScriptingFormat.Sql;
+                            }
+                            else
+                            {
+                                DataScriptingFormat d;
+                                Enum.TryParse(v, true, out d);
+                                p.DataScriptingFormat |= d; // Specify multiple formats in separate parameters
+                            }
                         }},
-                    {"tabledata=", "{NAME} of tables for which to script data in formats specified by -d. (Default all)", v => p.TableFilter.AddRange(v.SplitUpperCaseListParameter())},
+                    {"tabledata=", "{NAME} of tables for which to script data. (Default all)", v => p.TableFilter.AddRange(v.SplitUpperCaseListParameter())},
                     {"tabledatafile=", "{FILENAME} containing tables for which to script data for each database name. File format:\ndatabase:table1,table2,table3", v => p.TableDataFilterFile = v},
                     {"table=", "{NAME} of tables for which to script schema. (Default all)", v => p.TableFilter.AddRange(v.SplitUpperCaseListParameter())},
                     {"view=", "{NAME} of views for which to script schema. (Default all)", v => p.ViewFilter.AddRange(v.SplitUpperCaseListParameter())},
