@@ -15,7 +15,12 @@ namespace ScriptDb
             StoredProcedureFilter = new List<string>();
         }
 
-        public string ConnectionString { get; private set; }
+        public string Database { get; private set; }
+        public string Server { get; private set; }
+        public string UserName { get; private set; }
+        public string Password { get; private set; }
+        public bool TrustedAuthentication { get; private set; }
+        //public string ConnectionString { get; private set; }
         public string OutputDirectory { get; private set; }
         public string OutputFileName { get; private set; }
         public DataScriptingFormat DataScriptingFormat { get; private set; }
@@ -48,14 +53,19 @@ namespace ScriptDb
 
             var optionSet = new OptionSet
                 {
-                    {"con|connstr|connectionstring=", "The {CONNECTIONSTRING} to connect to the server.\nThis can also specify a database.", v => p.ConnectionString = v},
+                    {"S|server=", "The SQL {SERVER} to which to connect", v => p.Server = v},
+                    {"d|database=", "The {DATABASE} to script", v => p.Database = v},
+                    {"scriptalldatabases", "Script all databases on the server, instead of just one specified database", v => p.ScriptAllDatabases = (v != null)},
+                    {"U|login|username=", "The SQL {LOGIN} ID", v => p.UserName = v},
+                    {"P|password=", "The SQL {PASSWORD}", v => p.Password = v},
+                    {"E|trustedauth", "Use trusted authentication instead of a login and password", v => p.TrustedAuthentication = (v != null)},
+                    //{"con|connstr|connectionstring=", "The {CONNECTIONSTRING} to connect to the server.\nThis can also specify a database.", v => p.ConnectionString = v},
                     {"outdir|outputpath|outputdirectory=", "The {DIRECTORY} under which to write script files.", v => p.OutputDirectory = v},
                     {"outfile|filename|outputfilename=", "The {FILENAME} to which to write scripts.", v => p.OutputFileName = v},
                     {"v|verbose", "Show verbose messages.", v => p.Verbose = (v != null)},
                     {"purge", "Delete files from output directory before scripting.", v => p.Purge = (v != null)},
-                    {"scriptalldatabases", "Script all databases, instead of just the one specified by the connection string (if any)", v => p.ScriptAllDatabases = (v != null)},
                     {"includedatabase|scriptdatabase", "Script the database itself.", v => p.ScriptDatabase = (v != null)},
-                    {"d|datascriptingformat|tabledataformat=", "The {FORMAT} in which to script data to files. SQL (default), CSV, and/or BCP.", v =>
+                    {"dataformat|tabledataformat=", "The {FORMAT} in which to script data to files. SQL (default), CSV, and/or BCP.", v =>
                         {
                             DataScriptingFormat d;
                             Enum.TryParse(v, true, out d);
@@ -86,9 +96,23 @@ namespace ScriptDb
             {
                 error = "Unknown parameter: " + extraArgs[0];
             }
-            else if (string.IsNullOrWhiteSpace(p.ConnectionString))
+            //else if (string.IsNullOrWhiteSpace(p.ConnectionString))
+            //{
+            //    error = "connectionstring is required";
+            //}
+            else if (string.IsNullOrWhiteSpace(p.Server))
             {
-                error = "connectionstring is required";
+                error = "Specify a server";
+            }
+            //else if (string.IsNullOrWhiteSpace(p.Database) && !p.ScriptAllDatabases || !string.IsNullOrWhiteSpace(p.Database) && p.ScriptAllDatabases)
+            else if (string.IsNullOrWhiteSpace(p.Database) != p.ScriptAllDatabases)
+            {
+                error = "Specify either a database name or scriptalldatabases";
+            }
+            //else if (!string.IsNullOrWhiteSpace(p.UserName) && p.TrustedAuthentication)
+            else if (string.IsNullOrWhiteSpace(p.UserName) != p.TrustedAuthentication)
+            {
+                error = "Specify either a login and password or trusted auth";
             }
             else if (string.IsNullOrWhiteSpace(p.OutputDirectory) && string.IsNullOrWhiteSpace(p.OutputFileName))
             {

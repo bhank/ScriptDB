@@ -51,8 +51,9 @@ namespace Elsasoft.ScriptDb
                 }
 
                 var outputDirectory = parameters.OutputDirectory;
+                var connectionString = BuildConnectionString(parameters);
 
-                using (var sc = new SqlConnection(parameters.ConnectionString))
+                using (var sc = new SqlConnection(connectionString))
                 {
                     string database = sc.Database;
 
@@ -94,7 +95,7 @@ namespace Elsasoft.ScriptDb
                 ds.FinishCommand = parameters.FinishCommand;
                 var watch = new Stopwatch();
                 watch.Start();
-                ds.GenerateScripts(parameters.ConnectionString, outputDirectory, parameters.ScriptAllDatabases, parameters.Purge, parameters.DataScriptingFormat, parameters.Verbose, parameters.ScriptProperties);
+                ds.GenerateScripts(connectionString, outputDirectory, parameters.ScriptAllDatabases, parameters.Purge, parameters.DataScriptingFormat, parameters.Verbose, parameters.ScriptProperties);
                 Console.WriteLine("Took {0} ms", watch.ElapsedMilliseconds);
             }
             catch (Exception e)
@@ -112,6 +113,30 @@ namespace Elsasoft.ScriptDb
                     e = e.InnerException;
                 }
             }
+        }
+
+        private static string BuildConnectionString(Parameters parameters)
+        {
+            var builder = new SqlConnectionStringBuilder
+                {
+                    ApplicationName = "ScriptDb",
+                    DataSource = parameters.Server
+                };
+            if (!string.IsNullOrWhiteSpace(parameters.Database))
+            {
+                builder.InitialCatalog = parameters.Database;
+            }
+            if (string.IsNullOrWhiteSpace(parameters.UserName))
+            {
+                builder.IntegratedSecurity = true;
+            }
+            else
+            {
+                builder.UserID = parameters.UserName;
+                builder.Password = parameters.Password;
+            }
+            var connectionString = builder.ToString();
+            return connectionString;
         }
 
         private static Dictionary<string, List<string>> ReadTableDataFile(string tableDataFile)
