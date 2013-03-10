@@ -52,10 +52,9 @@ namespace Elsasoft.ScriptDb
 
                 var outputDirectory = parameters.OutputDirectory;
 
-                string database = null;
-                using (SqlConnection sc = new SqlConnection(parameters.ConnectionString))
+                using (var sc = new SqlConnection(parameters.ConnectionString))
                 {
-                    database = sc.Database;
+                    string database = sc.Database;
 
                     if (outputDirectory.Contains("{server}") || outputDirectory.Contains("{serverclean}"))
                     {
@@ -70,7 +69,7 @@ namespace Elsasoft.ScriptDb
 
                 if (!Directory.Exists(outputDirectory)) Directory.CreateDirectory(outputDirectory);
 
-                DatabaseScripter ds = new DatabaseScripter();
+                var ds = new DatabaseScripter();
 
                 ds.TableFilter = parameters.TableFilter.ToArray();
                 ds.TableDataFilter = parameters.TableDataFilter.ToArray();
@@ -96,7 +95,7 @@ namespace Elsasoft.ScriptDb
                 var watch = new Stopwatch();
                 watch.Start();
                 ds.GenerateScripts(parameters.ConnectionString, outputDirectory, parameters.ScriptAllDatabases, parameters.Purge, parameters.DataScriptingFormat, parameters.Verbose, parameters.ScriptProperties);
-                Console.WriteLine(string.Format("Took {0} ms", watch.ElapsedMilliseconds));
+                Console.WriteLine("Took {0} ms", watch.ElapsedMilliseconds);
             }
             catch (Exception e)
             {

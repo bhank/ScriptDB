@@ -31,7 +31,6 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
-using System.Text;
 using System.Collections.Specialized;
 using System.Data.SqlClient;
 using System.IO;
@@ -62,12 +61,6 @@ namespace Elsasoft.ScriptDb
             DdlTriggersFilter = new string[0];
         }
 
-        private const string createSprocStub = @"
-IF NOT EXISTS (SELECT * FROM sysobjects WHERE id = OBJECT_ID(N'[{0}].[{1}]') AND type in (N'P', N'PC'))
-EXEC sp_executesql N'CREATE PROCEDURE [{0}].[{1}] AS SELECT ''this is a stub.  replace me with real code please.'''
-GO
-";
-
         private bool FilterExists()
         {
             return TableFilter.Length > 0 || RulesFilter.Length > 0 || DefaultsFilter.Length > 0
@@ -81,15 +74,19 @@ GO
         /// </summary>
         /// <param name="connStr"></param>
         /// <param name="outputDirectory"></param>
+        /// <param name="dataScriptingFormat"></param>
         /// <param name="verbose"></param>
+        /// <param name="scriptAllDatabases"></param>
+        /// <param name="purgeDirectory"></param>
+        /// <param name="scriptProperties"></param>
         public void GenerateScripts(string connStr, string outputDirectory,
                                     bool scriptAllDatabases, bool purgeDirectory,
                                     DataScriptingFormat dataScriptingFormat, bool verbose, bool scriptProperties)
         {
             ConnectionString = connStr;
-            SqlConnection connection = new SqlConnection(connStr);
-            ServerConnection sc = new ServerConnection(connection);
-            Server s = new Server(sc);
+            var connection = new SqlConnection(connStr);
+            var sc = new ServerConnection(connection);
+            var s = new Server(sc);
 
             s.SetDefaultInitFields(typeof(StoredProcedure), "IsSystemObject", "IsEncrypted");
             s.SetDefaultInitFields(typeof(Table), "IsSystemObject");
@@ -162,15 +159,17 @@ GO
                 Directory.CreateDirectory(databaseOutputDirectory);
             }
 
-            ScriptingOptions so = new ScriptingOptions();
-            so.Default = true;
-            so.DriDefaults = true;
-            so.DriUniqueKeys = true;
-            so.Bindings = true;
-            so.Permissions = Permissions;
-            so.NoCollation = NoCollation;
-            so.Statistics = Statistics;
-            so.IncludeDatabaseContext = IncludeDatabase;
+            var so = new ScriptingOptions
+                {
+                    Default = true,
+                    DriDefaults = true,
+                    DriUniqueKeys = true,
+                    Bindings = true,
+                    Permissions = Permissions,
+                    NoCollation = NoCollation,
+                    Statistics = Statistics,
+                    IncludeDatabaseContext = IncludeDatabase
+                };
 
             ScriptTables(verbose, db, so, databaseOutputDirectory, dataScriptingFormat, server);
             ScriptDefaults(verbose, db, so, databaseOutputDirectory);
@@ -194,11 +193,11 @@ GO
 
         private void ScriptIndexes(TableViewBase tableOrView, bool verbose, Database db, ScriptingOptions so, string tablesOrViewsOutputDirectory)
         {
-            string indexes = Path.Combine(tablesOrViewsOutputDirectory, "Indexes");
-            string primaryKeys = Path.Combine(tablesOrViewsOutputDirectory, "PrimaryKeys");
-            string uniqueKeys = Path.Combine(tablesOrViewsOutputDirectory, "UniqueKeys");
+            var indexes = Path.Combine(tablesOrViewsOutputDirectory, "Indexes");
+            var primaryKeys = Path.Combine(tablesOrViewsOutputDirectory, "PrimaryKeys");
+            var uniqueKeys = Path.Combine(tablesOrViewsOutputDirectory, "UniqueKeys");
 
-            string FileName = Path.Combine(tablesOrViewsOutputDirectory, GetScriptFileName(tableOrView));
+            var fileName = Path.Combine(tablesOrViewsOutputDirectory, GetScriptFileName(tableOrView));
 
             foreach (Index smo in tableOrView.Indexes)
             {
@@ -208,8 +207,8 @@ GO
                         (smo.IndexKeyType == IndexKeyType.DriPrimaryKey) ? primaryKeys :
                         (smo.IndexKeyType == IndexKeyType.DriUniqueKey) ? uniqueKeys : indexes;
                     if (!TableOneFile)
-                        FileName = Path.Combine(dir, GetScriptFileName(tableOrView, smo));
-                    using (StreamWriter sw = GetStreamWriter(FileName, TableOneFile))
+                        fileName = Path.Combine(dir, GetScriptFileName(tableOrView, smo));
+                    using (StreamWriter sw = GetStreamWriter(fileName, TableOneFile))
                     {
                         if (verbose) Console.WriteLine("{0} Scripting {1}.{2}", db.Name, tableOrView.Name, smo.Name);
                         if (!CreateOnly)
@@ -220,9 +219,9 @@ GO
                         so.ScriptDrops = so.IncludeIfNotExists = false;
                         WriteScript(smo.Script(so), sw);
 
-                        if (Properties && smo is IExtendedProperties)
+                        if (Properties)
                         {
-                            ScriptProperties((IExtendedProperties)smo, sw);
+                            ScriptProperties(smo, sw);
                         }
                     }
                 }
@@ -245,9 +244,9 @@ GO
                 {
                     if (!FilterExists() || Array.IndexOf(TableFilter, table.Name.ToUpperInvariant()) >= 0)
                     {
-                        string FileName = Path.Combine(tables, GetScriptFileName(table));
+                        string fileName = Path.Combine(tables, GetScriptFileName(table));
                         #region Table Definition
-                        using (StreamWriter sw = GetStreamWriter(FileName, false))
+                        using (StreamWriter sw = GetStreamWriter(fileName, false))
                         {
                             if (verbose) Console.WriteLine("{0} Scripting {1}", db.Name, table.Name);
                             if (!CreateOnly)
@@ -258,9 +257,9 @@ GO
                             so.ScriptDrops = so.IncludeIfNotExists = false;
                             WriteScript(table.Script(so), sw);
 
-                            if (Properties && table is IExtendedProperties)
+                            if (Properties)
                             {
-                                ScriptProperties((IExtendedProperties)table, sw);
+                                ScriptProperties(table, sw);
                             }
                         }
 
@@ -273,8 +272,8 @@ GO
                             if (!smo.IsSystemObject && !smo.IsEncrypted)
                             {
                                 if (!TableOneFile)
-                                    FileName = Path.Combine(triggers, GetScriptFileName(table, smo));
-                                using (StreamWriter sw = GetStreamWriter(FileName, TableOneFile))
+                                    fileName = Path.Combine(triggers, GetScriptFileName(table, smo));
+                                using (StreamWriter sw = GetStreamWriter(fileName, TableOneFile))
                                 {
                                     if (verbose) Console.WriteLine("{0} Scripting {1}.{2}", db.Name, table.Name, smo.Name);
                                     if (!CreateOnly)
@@ -285,9 +284,9 @@ GO
                                     so.ScriptDrops = so.IncludeIfNotExists = false;
                                     WriteScript(smo.Script(so), sw);
 
-                                    if (Properties && smo is IExtendedProperties)
+                                    if (Properties)
                                     {
-                                        ScriptProperties((IExtendedProperties)smo, sw);
+                                        ScriptProperties(smo, sw);
                                     }
                                 }
                             }
@@ -302,8 +301,8 @@ GO
                         if (table.FullTextIndex != null)
                         {
                             if (!TableOneFile)
-                                FileName = Path.Combine(fullTextIndexes, GetScriptFileName(table));
-                            using (StreamWriter sw = GetStreamWriter(FileName, TableOneFile))
+                                fileName = Path.Combine(fullTextIndexes, GetScriptFileName(table));
+                            using (StreamWriter sw = GetStreamWriter(fileName, TableOneFile))
                             {
                                 if (verbose) Console.WriteLine("{0} Scripting full-text index for {1}", db.Name, table.Name);
                                 if (!CreateOnly)
@@ -322,8 +321,8 @@ GO
                         foreach (ForeignKey smo in table.ForeignKeys)
                         {
                             if (!TableOneFile)
-                                FileName = Path.Combine(foreignKeys, GetScriptFileName(table, smo));
-                            using (StreamWriter sw = GetStreamWriter(FileName, TableOneFile))
+                                fileName = Path.Combine(foreignKeys, GetScriptFileName(table, smo));
+                            using (StreamWriter sw = GetStreamWriter(fileName, TableOneFile))
                             {
                                 if (verbose) Console.WriteLine("{0} Scripting {1}.{2}", db.Name, table.Name, smo.Name);
                                 if (!CreateOnly)
@@ -332,9 +331,9 @@ GO
                                 }
                                 WriteScript(smo.Script(), sw);
 
-                                if (Properties && smo is IExtendedProperties)
+                                if (Properties)
                                 {
-                                    ScriptProperties((IExtendedProperties)smo, sw);
+                                    ScriptProperties(smo, sw);
                                 }
                             }
                         }
@@ -346,14 +345,14 @@ GO
                         foreach (Check smo in table.Checks)
                         {
                             if (!TableOneFile)
-                                FileName = Path.Combine(constraints, GetScriptFileName(table, smo));
-                            using (StreamWriter sw = GetStreamWriter(FileName, TableOneFile))
+                                fileName = Path.Combine(constraints, GetScriptFileName(table, smo));
+                            using (StreamWriter sw = GetStreamWriter(fileName, TableOneFile))
                             {
                                 if (verbose) Console.WriteLine("{0} Scripting {1}.{2}", db.Name, table.Name, smo.Name);
                                 WriteScript(smo.Script(), sw);
-                                if (Properties && smo is IExtendedProperties)
+                                if (Properties)
                                 {
-                                    ScriptProperties((IExtendedProperties)smo, sw);
+                                    ScriptProperties(smo, sw);
                                 }
                             }
                         }
@@ -370,10 +369,6 @@ GO
                         #endregion
                     }
                 }
-                else
-                {
-                    //if (verbose) Console.WriteLine("skipping system object {0}", table.Name);
-                }
             }
         }
 
@@ -381,11 +376,11 @@ GO
         {
             if ((dataScriptingFormat & DataScriptingFormat.Sql) == DataScriptingFormat.Sql)
             {
-                ScriptTableDataNative(db, table, verbose, dataDirectory, server);
+                ScriptTableDataNative(table, dataDirectory, server);
             }
             if ((dataScriptingFormat & DataScriptingFormat.Csv) == DataScriptingFormat.Csv)
             {
-                ScriptTableDataToCsv(db, table, verbose, dataDirectory);
+                ScriptTableDataToCsv(db, table, dataDirectory);
             }
             if ((dataScriptingFormat & DataScriptingFormat.Bcp) == DataScriptingFormat.Bcp)
             {
@@ -393,7 +388,7 @@ GO
             }
         }
 
-        private void ScriptTableDataNative(Database db, Table table, bool verbose, string dataDirectory, Server server)
+        private void ScriptTableDataNative(Table table, string dataDirectory, Server server)
         {
             if (!Directory.Exists(dataDirectory)) Directory.CreateDirectory(dataDirectory);
             var fileName = Path.ChangeExtension(Path.Combine(dataDirectory, GetScriptFileName(table)), "sql");
@@ -415,7 +410,7 @@ GO
             }
         }
 
-        private void ScriptTableDataToCsv(Database db, Table table, bool verbose, string dataDirectory)
+        private void ScriptTableDataToCsv(Database db, Table table, string dataDirectory)
         {
             if (!Directory.Exists(dataDirectory)) Directory.CreateDirectory(dataDirectory);
             var fileName = Path.ChangeExtension(Path.Combine(dataDirectory, GetScriptFileName(table)), "csv");
@@ -449,7 +444,7 @@ GO
             if (!Directory.Exists(dataDirectory)) Directory.CreateDirectory(dataDirectory);
             var fileName = Path.ChangeExtension(Path.Combine(dataDirectory, GetScriptFileName(table)), "txt");
 
-            using (Process p = new Process())
+            using (var p = new Process())
             {
                 var credentials = "-T";
 
@@ -555,9 +550,9 @@ GO
                     so.ScriptDrops = so.IncludeIfNotExists = false;
                     WriteScript(smo.Script(so), sw);
 
-                    if (Properties && smo is IExtendedProperties)
+                    if (Properties)
                     {
-                        ScriptProperties((IExtendedProperties)smo, sw);
+                        ScriptProperties(smo, sw);
                     }
                 }
             }
@@ -596,16 +591,12 @@ GO
                                 WriteScript(smo.Script(so), sw, "CREATE PROC", "ALTER PROC");
                             }
 
-                            if (Properties && smo is IExtendedProperties)
+                            if (Properties)
                             {
-                                ScriptProperties((IExtendedProperties)smo, sw);
+                                ScriptProperties(smo, sw);
                             }
                         }
                     }
-                }
-                else
-                {
-                    //if (verbose) Console.WriteLine("skipping system object {0}", smo.Name);
                 }
             }
         }
@@ -632,9 +623,9 @@ GO
                             so.ScriptDrops = so.IncludeIfNotExists = false;
                             WriteScript(smo.Script(so), sw);
 
-                            if (Properties && smo is IExtendedProperties)
+                            if (Properties)
                             {
-                                ScriptProperties((IExtendedProperties)smo, sw);
+                                ScriptProperties(smo, sw);
                             }
                         }
 
@@ -643,10 +634,6 @@ GO
                             ScriptIndexes(smo, verbose, db, so, views);
                         }
                     }
-                }
-                else
-                {
-                    //if (verbose) Console.WriteLine("skipping system object {0}", smo.Name);
                 }
             }
         }
@@ -677,16 +664,12 @@ GO
                             so.ScriptDrops = so.IncludeIfNotExists = false;
                             WriteScript(smo.Script(so), sw);
 
-                            if (Properties && smo is IExtendedProperties)
+                            if (Properties)
                             {
-                                ScriptProperties((IExtendedProperties)smo, sw);
+                                ScriptProperties(smo, sw);
                             }
                         }
                     }
-                }
-                else
-                {
-                    //if (verbose) Console.WriteLine("skipping system object {0}", smo.Name);
                 }
             }
         }
@@ -713,9 +696,9 @@ GO
                         so.ScriptDrops = so.IncludeIfNotExists = false;
                         WriteScript(smo.Script(so), sw);
 
-                        if (Properties && smo is IExtendedProperties)
+                        if (Properties)
                         {
-                            ScriptProperties((IExtendedProperties)smo, sw);
+                            ScriptProperties(smo, sw);
                         }
                     }
                 }
@@ -744,9 +727,9 @@ GO
                         so.ScriptDrops = so.IncludeIfNotExists = false;
                         WriteScript(smo.Script(so), sw);
 
-                        if (Properties && smo is IExtendedProperties)
+                        if (Properties)
                         {
-                            ScriptProperties((IExtendedProperties)smo, sw);
+                            ScriptProperties(smo, sw);
                         }
                     }
                 }
@@ -776,9 +759,9 @@ GO
                         so.ScriptDrops = so.IncludeIfNotExists = false;
                         WriteScript(smo.Script(so), sw);
 
-                        if (Properties && smo is IExtendedProperties)
+                        if (Properties)
                         {
-                            ScriptProperties((IExtendedProperties)smo, sw);
+                            ScriptProperties(smo, sw);
                         }
                     }
                 }
@@ -807,9 +790,9 @@ GO
                         so.ScriptDrops = so.IncludeIfNotExists = false;
                         WriteScript(smo.Script(so), sw);
 
-                        if (Properties && smo is IExtendedProperties)
+                        if (Properties)
                         {
-                            ScriptProperties((IExtendedProperties)smo, sw);
+                            ScriptProperties(smo, sw);
                         }
                     }
                 }
@@ -838,9 +821,9 @@ GO
                         so.ScriptDrops = so.IncludeIfNotExists = false;
                         WriteScript(smo.Script(so), sw);
 
-                        if (Properties && smo is IExtendedProperties)
+                        if (Properties)
                         {
-                            ScriptProperties((IExtendedProperties)smo, sw);
+                            ScriptProperties(smo, sw);
                         }
                     }
                 }
@@ -882,9 +865,9 @@ GO
                         so.ScriptDrops = so.IncludeIfNotExists = false;
                         WriteScript(smo.Script(so), sw);
 
-                        if (Properties && smo is IExtendedProperties)
+                        if (Properties)
                         {
-                            ScriptProperties((IExtendedProperties)smo, sw);
+                            ScriptProperties(smo, sw);
                         }
                     }
                 }
@@ -1033,12 +1016,12 @@ GO
         /// <returns></returns>
         private string ReplaceEx(string original, string pattern, string replacement)
         {
-            int count, position0, position1;
-            count = position0 = position1 = 0;
+            int position0, position1;
+            int count = position0 = 0;
             string upperString = original.ToUpper();
             string upperPattern = pattern.ToUpper();
             int inc = (original.Length / pattern.Length) * (replacement.Length - pattern.Length);
-            char[] chars = new char[original.Length + Math.Max(0, inc)];
+            var chars = new char[original.Length + Math.Max(0, inc)];
             while ((position1 = upperString.IndexOf(upperPattern, position0)) != -1)
             {
                 for (int i = position0; i < position1; ++i) chars[count++] = original[i];
@@ -1106,45 +1089,47 @@ GO
         /// THIS FUNCTION HAS A SIDEEFFECT.
         /// If OutputFileName is set, it will always open the filename
         /// </summary>
-        /// <param name="Path"></param>
-        /// <param name="Append"></param>
+        /// <param name="path"></param>
+        /// <param name="append"></param>
         /// <returns></returns>
-        private StreamWriter GetStreamWriter(string Path, bool Append)
+        private StreamWriter GetStreamWriter(string path, bool append)
         {
             if (OutputFileName != null)
             {
-                Path = OutputFileName;
-                Append = true;
+                path = OutputFileName;
+                append = true;
             }
             if (OutputFileName == "-")
-                return new StreamWriter(System.Console.OpenStandardOutput());
+                return new StreamWriter(Console.OpenStandardOutput());
 
-            if (!Directory.Exists(System.IO.Path.GetDirectoryName(Path))) Directory.CreateDirectory(System.IO.Path.GetDirectoryName(Path));
-            return new StreamWriter(Path, Append);
+            if (!Directory.Exists(Path.GetDirectoryName(path))) Directory.CreateDirectory(Path.GetDirectoryName(path));
+            return new StreamWriter(path, append);
         }
 
-        public static void PurgeDirectory(string DirName, string FileSpec)
+        public static void PurgeDirectory(string dirName, string fileSpec)
         {
-            string FullPath = Path.GetFullPath(DirName);
+            string fullPath = Path.GetFullPath(dirName);
             try
             {
                 var extensionsToPurge = new[] {".sql", ".csv", ".txt"};
-                foreach (var s in Directory.EnumerateFiles(FullPath, "*", SearchOption.AllDirectories).Where(f => extensionsToPurge.Contains(Path.GetExtension(f).ToLowerInvariant())))
+                foreach (var s in Directory.EnumerateFiles(fullPath, "*", SearchOption.AllDirectories).Where(f => extensionsToPurge.Contains(Path.GetExtension(f).ToLowerInvariant())))
                 {
                     // skip files inside .svn and .git folders (although these might be skipped regardless
                     // since they have a hidden attribute) 
                     if (!s.Contains(@"\.svn\") && !s.Contains(@"\.git\"))
                     {
-                        FileInfo file = new FileInfo(s);
-                        file.Attributes = FileAttributes.Normal;
+                        var file = new FileInfo(s)
+                            {
+                                Attributes = FileAttributes.Normal
+                            };
                         file.Delete();
                     }
                 }
             }
             catch (Exception e)
             {
-                Console.WriteLine("Exception {0} : {1}", e.Message, FullPath);
-            };
+                Console.WriteLine("Exception {0} : {1}", e.Message, fullPath);
+            }
         }
 
         #endregion

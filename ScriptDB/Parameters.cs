@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using NDesk.Options;
 
 namespace ScriptDb
@@ -45,11 +44,7 @@ namespace ScriptDb
         {
             parameters = null;
 
-            var p = new Parameters
-                {
-                    // set defaults?
-                    //Message = "Committed by SvnClient",
-                };
+            var p = new Parameters();
 
             var optionSet = new OptionSet
                 {
