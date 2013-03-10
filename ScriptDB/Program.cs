@@ -30,13 +30,11 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Text;
 using System.Data.SqlClient;
 using System.IO;
 using Microsoft.SqlServer.Management.Common;
 using Microsoft.SqlServer.Management.Smo;
 using ScriptDb;
-using Utility;
 
 namespace Elsasoft.ScriptDb
 {
@@ -44,37 +42,18 @@ namespace Elsasoft.ScriptDb
     {
         static void Main(string[] args)
         {
-            Utility.Arguments arguments = new Arguments(args);
             try
             {
-                if (arguments["?"] != null)
+                Parameters parameters;
+                if (!Parameters.TryParse(args, out parameters))
                 {
-                    PrintHelp();
                     return;
                 }
 
-                string connStr = arguments["con"];
-                string outputDirectory = arguments["outDir"];
-                var dataScriptingFormat = DataScriptingFormat.None;
-                if (arguments["d"] != null)
-                {
-                    if (!Enum.TryParse(arguments["d"], true, out dataScriptingFormat))
-                    {
-                        dataScriptingFormat = DataScriptingFormat.Sql;
-                    }
-                }
-                bool verbose = arguments["v"] != null;
-                bool scriptProperties = arguments["p"] != null;
-                bool Purge = arguments["Purge"] != null;
-                bool scriptAllDatabases = arguments["ScriptAllDatabases"] != null;
+                var outputDirectory = parameters.OutputDirectory;
 
-                if (connStr == null || outputDirectory == null)
-                {
-                    PrintHelp();
-                    return;
-                }
                 string database = null;
-                using (SqlConnection sc = new SqlConnection(connStr))
+                using (SqlConnection sc = new SqlConnection(parameters.ConnectionString))
                 {
                     database = sc.Database;
 
@@ -93,46 +72,30 @@ namespace Elsasoft.ScriptDb
 
                 DatabaseScripter ds = new DatabaseScripter();
 
-                if (arguments["table"] != null)
-                    ds.TableFilter = arguments["table"].Split(',');
-                if (arguments["tableData"] != null)
-                    ds.TableDataFilter = arguments["table"].ToUpperInvariant().Split(',');
-                var tableDataFile = arguments["tableDataFile"];
+                ds.TableFilter = parameters.TableFilter.ToArray();
+                ds.TableDataFilter = parameters.TableDataFilter.ToArray();
+                var tableDataFile = parameters.TableDataFilterFile;
                 if(tableDataFile != null)
                 {
                     ds.DatabaseTableDataFilter = ReadTableDataFile(tableDataFile);
                 }
-                if (arguments["view"] != null)
-                    ds.ViewsFilter = arguments["view"].Split(',');
-                if (arguments["sp"] != null)
-                    ds.SprocsFilter = arguments["sp"].Split(',');
-                if (arguments["TableOneFile"] != null)
-                    ds.TableOneFile = true;
-                if (arguments["ScriptAsCreate"] != null)
-                    ds.ScriptAsCreate = true;
-                if (arguments["Permissions"] != null)
-                    ds.Permissions = true;
-                if (arguments["NoCollation"] != null)
-                    ds.NoCollation = true;
-                if (arguments["Statistics"] != null)
-                    ds.Statistics = true;
-                if (arguments["IncludeDatabase"] != null)
-                    ds.IncludeDatabase = true;
-                if (arguments["CreateOnly"] != null)
-                    ds.CreateOnly = true;
-                if (arguments["filename"] != null)
-                    ds.OutputFileName = arguments["filename"];
-                if (arguments["StartCommand"] != null)
-                    ds.StartCommand = arguments["StartCommand"];
-                if (arguments["PreScriptingCommand"] != null)
-                    ds.PreScriptingCommand = arguments["PreScriptingCommand"];
-                if (arguments["PostScriptingCommand"] != null)
-                    ds.PostScriptingCommand = arguments["PostScriptingCommand"];
-                if (arguments["FinishCommand"] != null)
-                    ds.FinishCommand = arguments["FinishCommand"];
+                ds.ViewsFilter = parameters.ViewFilter.ToArray();
+                ds.SprocsFilter = parameters.StoredProcedureFilter.ToArray();
+                ds.TableOneFile = parameters.TableOneFile;
+                ds.ScriptAsCreate = parameters.ScriptAsCreate;
+                ds.Permissions = parameters.ScriptPermissions;
+                ds.NoCollation = parameters.NoCollation;
+                ds.Statistics = parameters.ScriptStatistics;
+                ds.IncludeDatabase = parameters.ScriptDatabase;
+                ds.CreateOnly = parameters.ScriptCreateOnly;
+                ds.OutputFileName = parameters.OutputFileName;
+                ds.StartCommand = parameters.StartCommand;
+                ds.PreScriptingCommand = parameters.PreScriptingCommand;
+                ds.PostScriptingCommand = parameters.PostScriptingCommand;
+                ds.FinishCommand = parameters.FinishCommand;
                 var watch = new Stopwatch();
                 watch.Start();
-                ds.GenerateScripts(connStr, outputDirectory, scriptAllDatabases, Purge, dataScriptingFormat, verbose, scriptProperties);
+                ds.GenerateScripts(parameters.ConnectionString, outputDirectory, parameters.ScriptAllDatabases, parameters.Purge, parameters.DataScriptingFormat, parameters.Verbose, parameters.ScriptProperties);
                 Console.WriteLine(string.Format("Took {0} ms", watch.ElapsedMilliseconds));
             }
             catch (Exception e)
