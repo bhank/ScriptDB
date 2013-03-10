@@ -9,18 +9,19 @@ Highlights of my version:
 * script table data to sql (INSERT statements), csv (using http://www.heikniemi.fi/jhlib/), or bcp (with fixed authentication)
 * specify tables for which to script data on the command line or in a file
 * run commands on startup, shutdown, and before and after scripting a database
-* script view indexes
+* script view indexes, full-text indexes, and statistics
 * use safe output filenames
+* improved command line interface
 
 The most significant change is the ability to run commands. This allows you to do things like scripting databases directly into source control with a single command.
 
 Scripting a single database:
 
-    scriptdb.exe -Purge -con:server=(local);database=Northwind;trusted_connection=yes -outDir:scripts -d -TableOneFile -Permissions -IncludeDatabase
+    scriptdb.exe --server=localhost --trustedauth --database=Northwind --purge --outputdirectory=scripts --scriptdata --tableonefile --scriptpermissions --scriptdatabase
 
 Using it along with https://github.com/bhank/SVNCompleteSync to script all databases on a server to SVN:
 
-    scriptdb.exe -TableOneFile -Purge -ScriptAllDatabases -d -Permissions -tableDataFile:ScriptDataTables.txt -con:server=(local);trusted_connection=yes -outDir:scripts\{serverclean} -StartCommand="svnclient.exe checkoutupdate \"https://svnserver/svn/Databases/{serverclean}\" \"{path}\" --mkdir --message=\"Adding server {server}\" --cleanworkingcopy --verbose --username=svnuser --password=svnpass --trust-server-cert" -PreScriptingCommand="cmd /c now.exe Scripting {database} & exit /b 0" -PostScriptingCommand="svnclient.exe completesync --message=\"Updating {database} on {server}\" \"{path}\{databaseclean}\" --verbose --username=svnuser --password=svnpass --trust-server-cert"
+    scriptdb.exe --server=localhost --trustedauth --scriptalldatabases --purge --scriptdata --tabledatafile=ScriptDataTables.txt --tableonefile --scriptdatabase --outputdirectory=scripts\{serverclean} --startcommand="svnclient.exe checkoutupdate \"https://svnserver/svn/Databases/{serverclean}\" \"{path}\" --mkdir --message=\"Adding server {server}\" --cleanworkingcopy --verbose --username=svnuser --password=svnpass --trust-server-cert" --prescriptingcommand="cmd /c now.exe Scripting {database} & exit /b 0" --postscriptingcommand="svnclient.exe completesync --message=\"Updating {database} on {server}\" \"{path}\{databaseclean}\" --verbose --username=svnuser --password=svnpass --trust-server-cert"
 
 
 -Adam Coyne
