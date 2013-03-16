@@ -35,7 +35,7 @@ using System.Collections.Specialized;
 using System.Data.SqlClient;
 using System.IO;
 using System.Diagnostics;
-
+using System.Text.RegularExpressions;
 using Microsoft.SqlServer.Management.Smo;
 using Microsoft.SqlServer.Management.Common;
 using ScriptDb;
@@ -241,7 +241,7 @@ namespace Elsasoft.ScriptDb
             {
                 if (!table.IsSystemObject)
                 {
-                    if (!FilterExists() || Array.IndexOf(TableFilter, table.Name.ToUpperInvariant()) >= 0)
+                    if (!FilterExists() || MatchesFilter(TableFilter, table.Name))
                     {
                         string fileName = Path.Combine(tables, GetScriptFileName(table));
                         #region Table Definition
@@ -369,6 +369,17 @@ namespace Elsasoft.ScriptDb
                     }
                 }
             }
+        }
+
+        private static bool MatchesFilter(IEnumerable<string> filter, string name)
+        {
+            return filter.Any(filterItem => MatchesWildcard(name, filterItem));
+        }
+
+        public static bool MatchesWildcard(string testString, string pattern)
+        {
+            var regex = "^" + Regex.Escape(pattern).Replace("\\*", ".*").Replace("\\?", ".") + "$";
+            return Regex.IsMatch(testString, regex, RegexOptions.IgnoreCase);
         }
 
         private void ScriptTableData(Database db, Table table, bool verbose, string dataDirectory, DataScriptingFormat dataScriptingFormat, Server server)
@@ -569,7 +580,7 @@ namespace Elsasoft.ScriptDb
             {
                 if (!smo.IsSystemObject && !smo.IsEncrypted)
                 {
-                    if (!FilterExists() || Array.IndexOf(SprocsFilter, smo.Name.ToUpperInvariant()) >= 0)
+                    if (!FilterExists() || MatchesFilter(SprocsFilter, smo.Name))
                     {
                         using (StreamWriter sw = GetStreamWriter(Path.Combine(sprocs, GetScriptFileName(smo)), false))
                         {
@@ -609,7 +620,7 @@ namespace Elsasoft.ScriptDb
             {
                 if (!smo.IsSystemObject && !smo.IsEncrypted)
                 {
-                    if (!FilterExists() || Array.IndexOf(ViewsFilter, smo.Name.ToUpperInvariant()) >= 0)
+                    if (!FilterExists() || MatchesFilter(ViewsFilter, smo.Name))
                     {
                         using (StreamWriter sw = GetStreamWriter(Path.Combine(views, GetScriptFileName(smo)), false))
                         {
@@ -650,7 +661,7 @@ namespace Elsasoft.ScriptDb
 
                 if (!smo.IsSystemObject && !smo.IsEncrypted)
                 {
-                    if (!FilterExists() || Array.IndexOf(UdfsFilter, smo.Name.ToUpperInvariant()) >= 0)
+                    if (!FilterExists() || MatchesFilter(UdfsFilter, smo.Name))
                     {
                         using (StreamWriter sw = GetStreamWriter(Path.Combine(udfs, GetScriptFileName(smo)), false))
                         {
@@ -682,7 +693,7 @@ namespace Elsasoft.ScriptDb
 
             foreach (UserDefinedType smo in db.UserDefinedTypes)
             {
-                if (!FilterExists() || Array.IndexOf(UdtsFilter, smo.Name.ToUpperInvariant()) >= 0)
+                if (!FilterExists() || MatchesFilter(UdtsFilter, smo.Name))
                 {
                     using (StreamWriter sw = GetStreamWriter(Path.Combine(types, GetScriptFileName(smo)), false))
                     {
@@ -713,7 +724,7 @@ namespace Elsasoft.ScriptDb
 
             foreach (UserDefinedDataType smo in db.UserDefinedDataTypes)
             {
-                if (!FilterExists() || Array.IndexOf(UddtsFilter, smo.Name.ToUpperInvariant()) >= 0)
+                if (!FilterExists() || MatchesFilter(UddtsFilter, smo.Name))
                 {
                     using (StreamWriter sw = GetStreamWriter(Path.Combine(types, GetScriptFileName(smo)), false))
                     {
@@ -745,7 +756,7 @@ namespace Elsasoft.ScriptDb
 
             foreach (Rule smo in db.Rules)
             {
-                if (!FilterExists() || Array.IndexOf(RulesFilter, smo.Name.ToUpperInvariant()) >= 0)
+                if (!FilterExists() || MatchesFilter(RulesFilter, smo.Name))
                 {
                     using (StreamWriter sw = GetStreamWriter(Path.Combine(rules, GetScriptFileName(smo)), false))
                     {
@@ -776,7 +787,7 @@ namespace Elsasoft.ScriptDb
 
             foreach (Default smo in db.Defaults)
             {
-                if (!FilterExists() || Array.IndexOf(DefaultsFilter, smo.Name.ToUpperInvariant()) >= 0)
+                if (!FilterExists() || MatchesFilter(DefaultsFilter, smo.Name))
                 {
                     using (StreamWriter sw = GetStreamWriter(Path.Combine(defaults, GetScriptFileName(smo)), false))
                     {
@@ -807,7 +818,7 @@ namespace Elsasoft.ScriptDb
 
             foreach (DatabaseDdlTrigger smo in db.Triggers)
             {
-                if (!FilterExists() || Array.IndexOf(DdlTriggersFilter, smo.Name.ToUpperInvariant()) >= 0)
+                if (!FilterExists() || MatchesFilter(DdlTriggersFilter, smo.Name))
                 {
                     using (StreamWriter sw = GetStreamWriter(Path.Combine(triggers, FixUpFileName(smo.Name) + ".sql"), false))
                     {
@@ -851,7 +862,7 @@ namespace Elsasoft.ScriptDb
                     smo.Name == "INFORMATION_SCHEMA" ||
                     smo.Name == "guest") continue;
 
-                if (!FilterExists() || Array.IndexOf(SchemasFilter, smo.Name.ToUpperInvariant()) >= 0)
+                if (!FilterExists() || MatchesFilter(SchemasFilter, smo.Name))
                 {
                     using (StreamWriter sw = GetStreamWriter(Path.Combine(schemas, FixUpFileName(smo.Name) + ".sql"), false))
                     {
