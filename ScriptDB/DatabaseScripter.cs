@@ -96,11 +96,11 @@ namespace Elsasoft.ScriptDb
             RunCommand(StartCommand, verbose, outputDirectory, s.Name, null);
 
             // Purge at the Server level only when we're doing all databases
-            if (purgeDirectory && scriptAllDatabases && Directory.Exists(outputDirectory))
+            if (purgeDirectory && scriptAllDatabases && outputDirectory != null && Directory.Exists(outputDirectory))
             {
-                if (verbose) Console.Write("Purging directory...");
+                if (verbose) Console.Error.Write("Purging directory...");
                 PurgeDirectory(outputDirectory, "*.sql");
-                if (verbose) Console.WriteLine("Done");
+                if (verbose) Console.Error.WriteLine("Done");
             }
 
 
@@ -143,19 +143,23 @@ namespace Elsasoft.ScriptDb
             Properties = scriptProperties;
 
             // Output folder
-            var databaseOutputDirectory = Path.Combine(outputDirectory, FixUpFileName(db.Name));
-            if (Directory.Exists(databaseOutputDirectory))
+            var databaseOutputDirectory = string.Empty;
+            if (outputDirectory != null)
             {
-                if (purgeDirectory)
+                databaseOutputDirectory = Path.Combine(outputDirectory, FixUpFileName(db.Name));
+                if (Directory.Exists(databaseOutputDirectory))
                 {
-                    if (verbose) Console.Write("Purging database directory...");
-                    PurgeDirectory(databaseOutputDirectory, "*.sql");
-                    if (verbose) Console.WriteLine("done.");
+                    if (purgeDirectory)
+                    {
+                        if (verbose) Console.Error.Write("Purging database directory...");
+                        PurgeDirectory(databaseOutputDirectory, "*.sql");
+                        if (verbose) Console.Error.WriteLine("done.");
+                    }
                 }
-            }
-            else
-            {
-                Directory.CreateDirectory(databaseOutputDirectory);
+                else
+                {
+                    Directory.CreateDirectory(databaseOutputDirectory);
+                }
             }
 
             var so = new ScriptingOptions
@@ -357,16 +361,16 @@ namespace Elsasoft.ScriptDb
                         }
 
                         #endregion
-
-                        #region Script Data
-
-                        if (dataScriptingFormat != DataScriptingFormat.None && MatchesTableDataFilters(db.Name, table.Name))
-                        {
-                            ScriptTableData(db, table, verbose, data, dataScriptingFormat, server);
-                        }
-
-                        #endregion
                     }
+
+                    #region Script Data
+
+                    if (MatchesTableDataFilters(db.Name, table.Name))
+                    {
+                        ScriptTableData(db, table, verbose, data, dataScriptingFormat, server);
+                    }
+
+                    #endregion
                 }
             }
         }
@@ -480,7 +484,7 @@ namespace Elsasoft.ScriptDb
                 p.Start();
                 string output = p.StandardOutput.ReadToEnd();
                 p.WaitForExit();
-                if (verbose) Console.WriteLine(output);
+                if (verbose) Console.Error.WriteLine(output);
             }
         }
 
@@ -488,17 +492,14 @@ namespace Elsasoft.ScriptDb
         {
             if(TableDataFilter.Length == 0 && DatabaseTableDataFilter == null)
             {
-                return true;
+                return false;
             }
 
-            databaseName = databaseName.ToUpperInvariant();
-            tableName = tableName.ToUpperInvariant();
-
-            if(Array.IndexOf(TableDataFilter, tableName) >= 0)
+            if (MatchesFilter(TableDataFilter, tableName))
             {
                 return true;
             }
-            if (DatabaseTableDataFilter.ContainsKey(databaseName) && (DatabaseTableDataFilter[databaseName].Contains(tableName) || DatabaseTableDataFilter[databaseName].Contains("*")))
+            if (DatabaseTableDataFilter != null && DatabaseTableDataFilter.ContainsKey(databaseName) && MatchesFilter(DatabaseTableDataFilter[databaseName], tableName))
             {
                 return true;
             }
@@ -903,7 +904,7 @@ namespace Elsasoft.ScriptDb
             string filename, arguments;
             if (ParseCommand(command, outputDirectory, serverName, databaseName, out filename, out arguments))
             {
-                if (verbose) Console.WriteLine("Running command: " + filename + " " + arguments);
+                if (verbose) Console.Error.WriteLine("Running command: " + filename + " " + arguments);
                 RunAndWait(filename, arguments);
             }
         }

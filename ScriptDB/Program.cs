@@ -57,7 +57,7 @@ namespace Elsasoft.ScriptDb
                 {
                     string database = sc.Database;
 
-                    if (outputDirectory.Contains("{server}") || outputDirectory.Contains("{serverclean}"))
+                    if (outputDirectory != null && (outputDirectory.Contains("{server}") || outputDirectory.Contains("{serverclean}")))
                     {
                         var serverConnection = new ServerConnection(sc);
                         var s = new Server(serverConnection);
@@ -68,7 +68,10 @@ namespace Elsasoft.ScriptDb
                     }
                 }
 
-                if (!Directory.Exists(outputDirectory)) Directory.CreateDirectory(outputDirectory);
+                if (outputDirectory != null && !Directory.Exists(outputDirectory))
+                {
+                    Directory.CreateDirectory(outputDirectory);
+                }
 
                 var ds = new DatabaseScripter();
 
@@ -97,20 +100,20 @@ namespace Elsasoft.ScriptDb
                 var watch = new Stopwatch();
                 watch.Start();
                 ds.GenerateScripts(outputDirectory, parameters.ScriptAllDatabases, parameters.Purge, parameters.DataScriptingFormat, parameters.Verbose, parameters.ScriptProperties);
-                Console.WriteLine("Took {0} ms", watch.ElapsedMilliseconds);
+                Console.Error.WriteLine("Took {0} ms", watch.ElapsedMilliseconds);
             }
             catch (Exception e)
             {
-                Console.WriteLine("Exception caught in Main()");
-                Console.WriteLine("---------------------------------------");
+                Console.Error.WriteLine("Exception caught in Main()");
+                Console.Error.WriteLine("---------------------------------------");
                 while (e != null)
                 {
-                    Console.WriteLine(e.Message);
-                    Console.WriteLine();
-                    Console.WriteLine(e.GetType().FullName);
-                    Console.WriteLine();
-                    Console.WriteLine(e.StackTrace);
-                    Console.WriteLine("---------------------------------------");
+                    Console.Error.WriteLine(e.Message);
+                    Console.Error.WriteLine();
+                    Console.Error.WriteLine(e.GetType().FullName);
+                    Console.Error.WriteLine();
+                    Console.Error.WriteLine(e.StackTrace);
+                    Console.Error.WriteLine("---------------------------------------");
                     e = e.InnerException;
                 }
             }
@@ -161,7 +164,7 @@ namespace Elsasoft.ScriptDb
 
         private static void PrintHelp()
         {
-            Console.WriteLine(
+            Console.Error.WriteLine(
 @"ScriptDb.exe usage:
 
 ScriptDb.exe 
