@@ -18,13 +18,12 @@ namespace ScriptDb
         }
 
         public bool Help { get; private set; }
+        public bool Examples { get; private set; }
         public bool Version { get; private set; }
         public string Database { get; private set; }
         public string Server { get; private set; }
         public string UserName { get; private set; }
         public string Password { get; private set; }
-        //public bool TrustedAuthentication { get; private set; }
-        //public string ConnectionString { get; private set; }
         public string OutputDirectory { get; private set; }
         public string OutputFileName { get; private set; }
         public DataScriptingFormat DataScriptingFormat { get; private set; }
@@ -62,6 +61,7 @@ namespace ScriptDb
             var optionSet = new OptionSet
                 {
                     {"h|?|help", "Show this help.", v => p.Help = (v != null)},
+                    {"x|examples", "Show examples of usage", v => p.Examples = (v!=null)},
                     {"V|version", "Show the version.", v => p.Version = (v != null)},
                     {"S|server=", "The SQL {SERVER} to which to connect (localhost if unspecified)", v => p.Server = v},
                     {"d|database=", "The {DATABASE} to script", v => p.Database = v},
@@ -106,11 +106,6 @@ namespace ScriptDb
             {
                 error = "Unknown parameter: " + extraArgs[0];
             }
-            //else if (string.IsNullOrWhiteSpace(p.ConnectionString))
-            //{
-            //    error = "connectionstring is required";
-            //}
-            //else if (string.IsNullOrWhiteSpace(p.Database) && !p.ScriptAllDatabases || !string.IsNullOrWhiteSpace(p.Database) && p.ScriptAllDatabases)
             else if (string.IsNullOrWhiteSpace(p.Database) != p.ScriptAllDatabases)
             {
                 error = "You must specify either --database=DATABASENAME or --scriptalldatabases";
@@ -131,10 +126,20 @@ namespace ScriptDb
             {
                 error = "You must specify --outputdirectory in order to use the {path} token in a command";
             }
+            else if (!string.IsNullOrWhiteSpace(p.OutputFileName) && ((p.DataScriptingFormat & DataScriptingFormat.Bcp) == DataScriptingFormat.Bcp || (p.DataScriptingFormat & DataScriptingFormat.Csv) == DataScriptingFormat.Csv))
+            {
+                error = "When writing to a single output file, you can only script data in SQL format.";
+            }
 
             if (p.Help)
             {
                 ShowUsage(optionSet);
+                return false;
+            }
+
+            if (p.Examples)
+            {
+                ShowExamples();
                 return false;
             }
 
@@ -171,13 +176,6 @@ namespace ScriptDb
 
         private static void ShowUsage(OptionSet optionSet)
         {
-            //var commands = new List<string>(Enum.GetNames(typeof(Command)));
-            //commands.RemoveAt(0);
-
-            //var exeName = AppDomain.CurrentDomain.FriendlyName;
-            //Console.Error.WriteLine(string.Format("{0} {{ {1} }}", exeName, string.Join(" | ", commands.ToArray())));
-            //Console.Error.WriteLine(string.Format("{0} {1} PATH [options]", exeName, Command.CompleteSync));
-            //Console.Error.WriteLine(string.Format("{0} {1} URL PATH [options]", exeName, Command.CheckoutUpdate));
             optionSet.WriteOptionDescriptions(Console.Error);
             Console.Error.WriteLine(@"
 
@@ -195,6 +193,29 @@ Commands can include these tokens:
 The outDir parameter can also use all these tokens except {path}.
 {database} is meaningful in StartCommand, FinishCommand and outDir only when
 just a single database is specified in the connection string to be scripted.
+");
+        }
+
+        private static void ShowExamples()
+        {
+            Console.Error.WriteLine(@"
+
+Connect to the Northwind database on localhost using trusted auth,
+and script the schema of all tables, views, and stored procedures
+whose names start with ""cust"", and the data from all tables
+regardless of their names, into the scripts directory,
+deleting its contents first:
+
+  scriptdb.exe -d Northwind --tables=cust* --views=cust* --storedprocs=cust*
+    --scriptdata --purge --outdir=scripts
+
+
+2. Connect to the Orders database on DBSERVER using a SQL login,
+and script all objects and data to a single file.
+
+  scriptdb.exe -S DBSERVER -U mylogin -P mypassword -D Orders
+    --tables --views --sps --scriptdata --outfile=AllScripts.sql
+
 ");
         }
     }
