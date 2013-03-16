@@ -415,7 +415,7 @@ namespace Elsasoft.ScriptDb
                     ScriptSchema = false
                 }
             };
-            using (TextWriter writer = new StreamWriter(fileName))
+            using (TextWriter writer = GetStreamWriter(fileName, false))
             {
                 foreach (var script in scripter.EnumScript(new[] { table }))
                 {
