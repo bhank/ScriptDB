@@ -116,13 +116,14 @@ namespace Elsasoft.ScriptDb
                     }
                     catch (Exception e)
                     {
-                        Console.WriteLine("Exception: {0}", e.Message);
+                        Console.Error.WriteLine("Exception: {0}", e.Message);
                     }
                 }
             }
             else
             {
-                var db = s.Databases[connection.Database];
+                //var db = s.Databases[connection.Database]; // Doesn't fix the case of the database name.
+                var db = s.Databases.Cast<Database>().Single(d => d.Name.ToUpperInvariant() == connection.Database.ToUpperInvariant());
                 if(db == null)
                 {
                     throw new Exception(string.Format("Database '{0}' was not found", connection.Database));
@@ -213,7 +214,7 @@ namespace Elsasoft.ScriptDb
                         fileName = Path.Combine(dir, GetScriptFileName(tableOrView, smo));
                     using (StreamWriter sw = GetStreamWriter(fileName, TableOneFile))
                     {
-                        if (verbose) Console.WriteLine("{0} Scripting {1}.{2}", db.Name, tableOrView.Name, smo.Name);
+                        if (verbose) Console.Error.WriteLine("[{0}].[{1}].[{2}]: [{3}]", db.Name, tableOrView.Schema, tableOrView.Name, smo.Name);
                         if (!CreateOnly)
                         {
                             so.ScriptDrops = so.IncludeIfNotExists = true;
@@ -251,7 +252,7 @@ namespace Elsasoft.ScriptDb
                         #region Table Definition
                         using (StreamWriter sw = GetStreamWriter(fileName, false))
                         {
-                            if (verbose) Console.WriteLine("{0} Scripting {1}", db.Name, table.Name);
+                            if (verbose) Console.Error.WriteLine("[{0}].[{1}].[{2}]", db.Name, table.Schema, table.Name);
                             if (!CreateOnly)
                             {
                                 so.ScriptDrops = so.IncludeIfNotExists = true;
@@ -278,7 +279,7 @@ namespace Elsasoft.ScriptDb
                                     fileName = Path.Combine(triggers, GetScriptFileName(table, smo));
                                 using (StreamWriter sw = GetStreamWriter(fileName, TableOneFile))
                                 {
-                                    if (verbose) Console.WriteLine("{0} Scripting {1}.{2}", db.Name, table.Name, smo.Name);
+                                    if (verbose) Console.Error.WriteLine("[{0}].[{1}].[{2}]: [{3}]", db.Name, table.Schema, table.Name, smo.Name);
                                     if (!CreateOnly)
                                     {
                                         so.ScriptDrops = so.IncludeIfNotExists = true;
@@ -307,7 +308,7 @@ namespace Elsasoft.ScriptDb
                                 fileName = Path.Combine(fullTextIndexes, GetScriptFileName(table));
                             using (StreamWriter sw = GetStreamWriter(fileName, TableOneFile))
                             {
-                                if (verbose) Console.WriteLine("{0} Scripting full-text index for {1}", db.Name, table.Name);
+                                if (verbose) Console.Error.WriteLine("[{0}].[{1}].[{2}]: full-text index", db.Name, table.Schema, table.Name);
                                 if (!CreateOnly)
                                 {
                                     so.ScriptDrops = so.IncludeIfNotExists = true;
@@ -327,7 +328,7 @@ namespace Elsasoft.ScriptDb
                                 fileName = Path.Combine(foreignKeys, GetScriptFileName(table, smo));
                             using (StreamWriter sw = GetStreamWriter(fileName, TableOneFile))
                             {
-                                if (verbose) Console.WriteLine("{0} Scripting {1}.{2}", db.Name, table.Name, smo.Name);
+                                if (verbose) Console.Error.WriteLine("[{0}].[{1}].[{2}]: [{3}]", db.Name, table.Schema, table.Name, smo.Name);
                                 if (!CreateOnly)
                                 {
                                     so.ScriptDrops = so.IncludeIfNotExists = true;
@@ -351,7 +352,7 @@ namespace Elsasoft.ScriptDb
                                 fileName = Path.Combine(constraints, GetScriptFileName(table, smo));
                             using (StreamWriter sw = GetStreamWriter(fileName, TableOneFile))
                             {
-                                if (verbose) Console.WriteLine("{0} Scripting {1}.{2}", db.Name, table.Name, smo.Name);
+                                if (verbose) Console.Error.WriteLine("[{0}].[{1}].[{2}]: [{3}]", db.Name, table.Schema, table.Name, smo.Name);
                                 WriteScript(smo.Script(), sw);
                                 if (Properties)
                                 {
@@ -480,7 +481,7 @@ namespace Elsasoft.ScriptDb
                 //p.StartInfo.WorkingDirectory = dataDirectory;
                 p.StartInfo.UseShellExecute = false;
                 p.StartInfo.RedirectStandardOutput = true;
-                if (verbose) Console.WriteLine("bcp.exe {0}", p.StartInfo.Arguments);
+                if (verbose) Console.Error.WriteLine("{0} {1}", p.StartInfo.FileName, p.StartInfo.Arguments);
                 p.Start();
                 string output = p.StandardOutput.ReadToEnd();
                 p.WaitForExit();
@@ -521,7 +522,7 @@ namespace Elsasoft.ScriptDb
                 {
                     using (StreamWriter sw = GetStreamWriter(Path.Combine(dropAssemblies, FixUpFileName(smo.Name) + ".DROP.sql"), false))
                     {
-                        if (verbose) Console.WriteLine("Scripting Drop {0}", smo.Name);
+                        if (verbose) Console.Error.WriteLine("[{0}]: DROP [{1}]", db.Name, smo.Name);
                         so.ScriptDrops = so.IncludeIfNotExists = true;
 
                         //
@@ -557,7 +558,7 @@ namespace Elsasoft.ScriptDb
                 }
                 using (StreamWriter sw = GetStreamWriter(Path.Combine(assemblies, FixUpFileName(smo.Name) + ".sql"), false))
                 {
-                    if (verbose) Console.WriteLine("{0} Scripting {1}", db.Name, smo.Name);
+                    if (verbose) Console.Error.WriteLine("[{0}]: [{1}]", db.Name, smo.Name);
                     so.ScriptDrops = so.IncludeIfNotExists = false;
                     WriteScript(smo.Script(so), sw);
 
@@ -585,7 +586,7 @@ namespace Elsasoft.ScriptDb
                     {
                         using (StreamWriter sw = GetStreamWriter(Path.Combine(sprocs, GetScriptFileName(smo)), false))
                         {
-                            if (verbose) Console.WriteLine("{0} Scripting {1}", db.Name, smo.Name);
+                            if (verbose) Console.Error.WriteLine("[{0}].[{1}].[{2}]", db.Name, smo.Schema, smo.Name);
                             if (ScriptAsCreate)
                             {
                                 so.ScriptDrops = so.IncludeIfNotExists = true;
@@ -625,7 +626,7 @@ namespace Elsasoft.ScriptDb
                     {
                         using (StreamWriter sw = GetStreamWriter(Path.Combine(views, GetScriptFileName(smo)), false))
                         {
-                            if (verbose) Console.WriteLine("{0} Scripting {1}", db.Name, smo.Name);
+                            if (verbose) Console.Error.WriteLine("[{0}].[{1}].[{2}]", db.Name, smo.Schema, smo.Name);
                             if (!CreateOnly)
                             {
                                 so.ScriptDrops = so.IncludeIfNotExists = true;
@@ -666,7 +667,7 @@ namespace Elsasoft.ScriptDb
                     {
                         using (StreamWriter sw = GetStreamWriter(Path.Combine(udfs, GetScriptFileName(smo)), false))
                         {
-                            if (verbose) Console.WriteLine("{0} Scripting {1}", db.Name, smo.Name);
+                            if (verbose) Console.Error.WriteLine("[{0}].[{1}].[{2}]", db.Name, smo.Schema, smo.Name);
                             if (!CreateOnly)
                             {
                                 so.ScriptDrops = so.IncludeIfNotExists = true;
@@ -698,7 +699,7 @@ namespace Elsasoft.ScriptDb
                 {
                     using (StreamWriter sw = GetStreamWriter(Path.Combine(types, GetScriptFileName(smo)), false))
                     {
-                        if (verbose) Console.WriteLine("{0} Scripting {1}", db.Name, smo.Name);
+                        if (verbose) Console.Error.WriteLine("[{0}].[{1}].[{2}]", db.Name, smo.Schema, smo.Name);
                         if (!CreateOnly)
                         {
                             so.ScriptDrops = so.IncludeIfNotExists = true;
@@ -729,7 +730,7 @@ namespace Elsasoft.ScriptDb
                 {
                     using (StreamWriter sw = GetStreamWriter(Path.Combine(types, GetScriptFileName(smo)), false))
                     {
-                        if (verbose) Console.WriteLine("{0} Scripting {1}", db.Name, smo.Name);
+                        if (verbose) Console.Error.WriteLine("[{0}].[{1}].[{2}]", db.Name, smo.Schema, smo.Name);
                         if (!CreateOnly)
                         {
                             so.ScriptDrops = so.IncludeIfNotExists = true;
@@ -761,7 +762,7 @@ namespace Elsasoft.ScriptDb
                 {
                     using (StreamWriter sw = GetStreamWriter(Path.Combine(rules, GetScriptFileName(smo)), false))
                     {
-                        if (verbose) Console.WriteLine("{0} Scripting {1}", db.Name, smo.Name);
+                        if (verbose) Console.Error.WriteLine("[{0}].[{1}].[{2}]", db.Name, smo.Schema, smo.Name);
                         if (!CreateOnly)
                         {
                             so.ScriptDrops = so.IncludeIfNotExists = true;
@@ -792,7 +793,7 @@ namespace Elsasoft.ScriptDb
                 {
                     using (StreamWriter sw = GetStreamWriter(Path.Combine(defaults, GetScriptFileName(smo)), false))
                     {
-                        if (verbose) Console.WriteLine("{0} Scripting {1}", db.Name, smo.Name);
+                        if (verbose) Console.Error.WriteLine("[{0}].[{1}].[{2}]", db.Name, smo.Schema, smo.Name);
                         if (!CreateOnly)
                         {
                             so.ScriptDrops = so.IncludeIfNotExists = true;
@@ -823,7 +824,7 @@ namespace Elsasoft.ScriptDb
                 {
                     using (StreamWriter sw = GetStreamWriter(Path.Combine(triggers, FixUpFileName(smo.Name) + ".sql"), false))
                     {
-                        if (verbose) Console.WriteLine("{0} Scripting {1}", db.Name, smo.Name);
+                        if (verbose) Console.Error.WriteLine("[{0}]: [{1}]", db.Name, smo.Name);
                         if (!CreateOnly)
                         {
                             so.ScriptDrops = so.IncludeIfNotExists = true;
@@ -867,7 +868,7 @@ namespace Elsasoft.ScriptDb
                 {
                     using (StreamWriter sw = GetStreamWriter(Path.Combine(schemas, FixUpFileName(smo.Name) + ".sql"), false))
                     {
-                        if (verbose) Console.WriteLine("{0} Scripting {1}", db.Name, smo.Name);
+                        if (verbose) Console.Error.WriteLine("[{0}]: [{1}]", db.Name, smo.Name);
                         if (!CreateOnly)
                         {
                             so.ScriptDrops = so.IncludeIfNotExists = true;
@@ -1139,7 +1140,7 @@ namespace Elsasoft.ScriptDb
             }
             catch (Exception e)
             {
-                Console.WriteLine("Exception {0} : {1}", e.Message, fullPath);
+                Console.Error.WriteLine("Exception {0} : {1}", e.Message, fullPath);
             }
         }
 

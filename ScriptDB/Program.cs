@@ -32,6 +32,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Data.SqlClient;
 using System.IO;
+using System.Linq;
 using Microsoft.SqlServer.Management.Common;
 using Microsoft.SqlServer.Management.Smo;
 using ScriptDb;
@@ -55,12 +56,14 @@ namespace Elsasoft.ScriptDb
 
                 using (var sc = new SqlConnection(connectionString))
                 {
-                    string database = sc.Database;
-
                     if (outputDirectory != null && (outputDirectory.Contains("{server}") || outputDirectory.Contains("{serverclean}")))
                     {
                         var serverConnection = new ServerConnection(sc);
                         var s = new Server(serverConnection);
+                        // Get the proper case for the database name
+                        //var database = s.Databases[sc.Database.ToLowerInvariant()].Name; // If I index into the collection, the .Name property gives me back the same case I put in!
+                        var database = s.Databases.Cast<Database>().Single(d => d.Name.ToUpperInvariant() == sc.Database.ToUpperInvariant()).Name;
+
                         outputDirectory = outputDirectory.Replace("{server}", s.Name);
                         outputDirectory = outputDirectory.Replace("{serverclean}", DatabaseScripter.FixUpFileName(s.Name));
                         outputDirectory = outputDirectory.Replace("{database}", database);
@@ -124,7 +127,7 @@ namespace Elsasoft.ScriptDb
             var builder = new SqlConnectionStringBuilder
                 {
                     ApplicationName = "ScriptDb",
-                    DataSource = parameters.Server
+                    DataSource = parameters.Server.ToLowerInvariant(),
                 };
             if (!string.IsNullOrWhiteSpace(parameters.Database))
             {
