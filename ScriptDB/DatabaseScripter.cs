@@ -248,120 +248,7 @@ namespace Elsasoft.ScriptDb
                 {
                     if (!FilterExists() || MatchesFilter(TableFilter, table.Name))
                     {
-                        string fileName = Path.Combine(tables, GetScriptFileName(table));
-                        #region Table Definition
-                        using (StreamWriter sw = GetStreamWriter(fileName, false))
-                        {
-                            if (verbose) Console.Error.WriteLine("[{0}].[{1}].[{2}]", db.Name, table.Schema, table.Name);
-                            if (!CreateOnly)
-                            {
-                                so.ScriptDrops = so.IncludeIfNotExists = true;
-                                WriteScript(table.Script(so), sw);
-                            }
-                            so.ScriptDrops = so.IncludeIfNotExists = false;
-                            WriteScript(table.Script(so), sw);
-
-                            if (Properties)
-                            {
-                                ScriptProperties(table, sw);
-                            }
-                        }
-
-                        #endregion
-
-                        #region Triggers
-
-                        foreach (Trigger smo in table.Triggers)
-                        {
-                            if (!smo.IsSystemObject && !smo.IsEncrypted)
-                            {
-                                if (!TableOneFile)
-                                    fileName = Path.Combine(triggers, GetScriptFileName(table, smo));
-                                using (StreamWriter sw = GetStreamWriter(fileName, TableOneFile))
-                                {
-                                    if (verbose) Console.Error.WriteLine("[{0}].[{1}].[{2}]: [{3}]", db.Name, table.Schema, table.Name, smo.Name);
-                                    if (!CreateOnly)
-                                    {
-                                        so.ScriptDrops = so.IncludeIfNotExists = true;
-                                        WriteScript(smo.Script(so), sw);
-                                    }
-                                    so.ScriptDrops = so.IncludeIfNotExists = false;
-                                    WriteScript(smo.Script(so), sw);
-
-                                    if (Properties)
-                                    {
-                                        ScriptProperties(smo, sw);
-                                    }
-                                }
-                            }
-                        }
-
-                        #endregion
-
-                        ScriptIndexes(table, verbose, db, so, tables);
-
-                        #region Full Text Indexes
-
-                        if (table.FullTextIndex != null)
-                        {
-                            if (!TableOneFile)
-                                fileName = Path.Combine(fullTextIndexes, GetScriptFileName(table));
-                            using (StreamWriter sw = GetStreamWriter(fileName, TableOneFile))
-                            {
-                                if (verbose) Console.Error.WriteLine("[{0}].[{1}].[{2}]: full-text index", db.Name, table.Schema, table.Name);
-                                if (!CreateOnly)
-                                {
-                                    so.ScriptDrops = so.IncludeIfNotExists = true;
-                                    WriteScript(table.FullTextIndex.Script(so), sw);
-                                }
-                                so.ScriptDrops = so.IncludeIfNotExists = false;
-                                WriteScript(table.FullTextIndex.Script(so), sw);
-                            }
-                        }
-
-                        #endregion
-                        #region Foreign Keys
-
-                        foreach (ForeignKey smo in table.ForeignKeys)
-                        {
-                            if (!TableOneFile)
-                                fileName = Path.Combine(foreignKeys, GetScriptFileName(table, smo));
-                            using (StreamWriter sw = GetStreamWriter(fileName, TableOneFile))
-                            {
-                                if (verbose) Console.Error.WriteLine("[{0}].[{1}].[{2}]: [{3}]", db.Name, table.Schema, table.Name, smo.Name);
-                                if (!CreateOnly)
-                                {
-                                    so.ScriptDrops = so.IncludeIfNotExists = true;
-                                }
-                                WriteScript(smo.Script(), sw);
-
-                                if (Properties)
-                                {
-                                    ScriptProperties(smo, sw);
-                                }
-                            }
-                        }
-
-                        #endregion
-
-                        #region Constraints
-
-                        foreach (Check smo in table.Checks)
-                        {
-                            if (!TableOneFile)
-                                fileName = Path.Combine(constraints, GetScriptFileName(table, smo));
-                            using (StreamWriter sw = GetStreamWriter(fileName, TableOneFile))
-                            {
-                                if (verbose) Console.Error.WriteLine("[{0}].[{1}].[{2}]: [{3}]", db.Name, table.Schema, table.Name, smo.Name);
-                                WriteScript(smo.Script(), sw);
-                                if (Properties)
-                                {
-                                    ScriptProperties(smo, sw);
-                                }
-                            }
-                        }
-
-                        #endregion
+                        ScriptTable(verbose, db, so, tables, table, triggers, fullTextIndexes, foreignKeys, constraints);
                     }
 
                     #region Script Data
@@ -374,6 +261,127 @@ namespace Elsasoft.ScriptDb
                     #endregion
                 }
             }
+        }
+
+        private void ScriptTable(bool verbose, Database db, ScriptingOptions so, string tables, Table table, string triggers, string fullTextIndexes, string foreignKeys, string constraints)
+        {
+            string fileName = Path.Combine(tables, GetScriptFileName(table));
+
+            #region Table Definition
+
+            using (StreamWriter sw = GetStreamWriter(fileName, false))
+            {
+                if (verbose) Console.Error.WriteLine("[{0}].[{1}].[{2}]", db.Name, table.Schema, table.Name);
+                if (!CreateOnly)
+                {
+                    so.ScriptDrops = so.IncludeIfNotExists = true;
+                    WriteScript(table.Script(so), sw);
+                }
+                so.ScriptDrops = so.IncludeIfNotExists = false;
+                WriteScript(table.Script(so), sw);
+
+                if (Properties)
+                {
+                    ScriptProperties(table, sw);
+                }
+            }
+
+            #endregion
+
+            #region Triggers
+
+            foreach (Trigger smo in table.Triggers)
+            {
+                if (!smo.IsSystemObject && !smo.IsEncrypted)
+                {
+                    if (!TableOneFile)
+                        fileName = Path.Combine(triggers, GetScriptFileName(table, smo));
+                    using (StreamWriter sw = GetStreamWriter(fileName, TableOneFile))
+                    {
+                        if (verbose) Console.Error.WriteLine("[{0}].[{1}].[{2}]: [{3}]", db.Name, table.Schema, table.Name, smo.Name);
+                        if (!CreateOnly)
+                        {
+                            so.ScriptDrops = so.IncludeIfNotExists = true;
+                            WriteScript(smo.Script(so), sw);
+                        }
+                        so.ScriptDrops = so.IncludeIfNotExists = false;
+                        WriteScript(smo.Script(so), sw);
+
+                        if (Properties)
+                        {
+                            ScriptProperties(smo, sw);
+                        }
+                    }
+                }
+            }
+
+            #endregion
+
+            ScriptIndexes(table, verbose, db, so, tables);
+
+            #region Full Text Indexes
+
+            if (table.FullTextIndex != null)
+            {
+                if (!TableOneFile)
+                    fileName = Path.Combine(fullTextIndexes, GetScriptFileName(table));
+                using (StreamWriter sw = GetStreamWriter(fileName, TableOneFile))
+                {
+                    if (verbose) Console.Error.WriteLine("[{0}].[{1}].[{2}]: full-text index", db.Name, table.Schema, table.Name);
+                    if (!CreateOnly)
+                    {
+                        so.ScriptDrops = so.IncludeIfNotExists = true;
+                        WriteScript(table.FullTextIndex.Script(so), sw);
+                    }
+                    so.ScriptDrops = so.IncludeIfNotExists = false;
+                    WriteScript(table.FullTextIndex.Script(so), sw);
+                }
+            }
+
+            #endregion
+
+            #region Foreign Keys
+
+            foreach (ForeignKey smo in table.ForeignKeys)
+            {
+                if (!TableOneFile)
+                    fileName = Path.Combine(foreignKeys, GetScriptFileName(table, smo));
+                using (StreamWriter sw = GetStreamWriter(fileName, TableOneFile))
+                {
+                    if (verbose) Console.Error.WriteLine("[{0}].[{1}].[{2}]: [{3}]", db.Name, table.Schema, table.Name, smo.Name);
+                    if (!CreateOnly)
+                    {
+                        so.ScriptDrops = so.IncludeIfNotExists = true;
+                    }
+                    WriteScript(smo.Script(), sw);
+
+                    if (Properties)
+                    {
+                        ScriptProperties(smo, sw);
+                    }
+                }
+            }
+
+            #endregion
+
+            #region Constraints
+
+            foreach (Check smo in table.Checks)
+            {
+                if (!TableOneFile)
+                    fileName = Path.Combine(constraints, GetScriptFileName(table, smo));
+                using (StreamWriter sw = GetStreamWriter(fileName, TableOneFile))
+                {
+                    if (verbose) Console.Error.WriteLine("[{0}].[{1}].[{2}]: [{3}]", db.Name, table.Schema, table.Name, smo.Name);
+                    WriteScript(smo.Script(), sw);
+                    if (Properties)
+                    {
+                        ScriptProperties(smo, sw);
+                    }
+                }
+            }
+
+            #endregion
         }
 
         private static bool MatchesFilter(IEnumerable<string> filter, string name)
