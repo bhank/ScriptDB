@@ -1132,7 +1132,10 @@ namespace Elsasoft.ScriptDb
             if (OutputFileName == "-")
                 return new StreamWriter(Console.OpenStandardOutput());
 
-            if (!Directory.Exists(Path.GetDirectoryName(path))) Directory.CreateDirectory(Path.GetDirectoryName(path));
+            if (!string.IsNullOrEmpty(Path.GetDirectoryName(path)) && !Directory.Exists(Path.GetDirectoryName(path)))
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
+            }
             return new StreamWriter(path, append);
         }
 
