@@ -186,10 +186,12 @@ namespace ScriptDb
             optionSet.WriteOptionDescriptions(Console.Error);
             Console.Error.WriteLine(@"
 
-If you do not pass any of the filter parameters --tables, --views, or --storedprocedures,
-then all objects will be scripted. If you do pass a filter parameter, then you must
-specify all the objects you want scripted. For example, passing only --tables will
-prevent any views or stored procedures from being scripted.
+If you do not pass any of the filter parameters --tables, --datatables,
+--views, or --storedprocedures, then schema for all objects will be scripted.
+(Data is only scripted if --datatables is passed.) If you do pass a filter
+parameter, then you must specify all the objects you want scripted. For
+example, passing only --tables will prevent any views or stored procedures
+from being scripted.
 
 Commands can include these tokens:
 {path} - the output directory

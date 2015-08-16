@@ -66,7 +66,7 @@ namespace Elsasoft.ScriptDb
             return TableFilter.Length > 0 || RulesFilter.Length > 0 || DefaultsFilter.Length > 0
                    || UddtsFilter.Length > 0 || UdfsFilter.Length > 0 || ViewsFilter.Length > 0
                    || SprocsFilter.Length > 0 || UdtsFilter.Length > 0 || SchemasFilter.Length > 0
-                   || DdlTriggersFilter.Length > 0;
+                   || DdlTriggersFilter.Length > 0 || TableDataFilter.Length > 0;
         }
 
         /// <summary>
