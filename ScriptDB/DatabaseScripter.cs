@@ -247,11 +247,10 @@ namespace Elsasoft.ScriptDb
         {
             string data = Path.Combine(outputDirectory, "Data");
             string tables = Path.Combine(outputDirectory, "Tables");
-            string programmability = Path.Combine(outputDirectory, "Programmability");
             string constraints = Path.Combine(tables, "Constraints");
             string foreignKeys = Path.Combine(tables, "ForeignKeys");
             string fullTextIndexes = Path.Combine(tables, "FullTextIndexes");
-            string triggers = Path.Combine(programmability, "Triggers");
+            string triggers = Path.Combine(tables, "Triggers");
 
             foreach (Table table in db.Tables)
             {
@@ -834,7 +833,7 @@ namespace Elsasoft.ScriptDb
         {
             string programmability = Path.Combine(outputDirectory, "Programmability");
             //            if (!Directory.Exists(programmability)) Directory.CreateDirectory(programmability);
-            string triggers = Path.Combine(programmability, "Triggers");
+            string triggers = Path.Combine(programmability, "Database Triggers");
             //            if (!Directory.Exists(triggers)) Directory.CreateDirectory(triggers);
 
             foreach (DatabaseDdlTrigger smo in db.Triggers)
