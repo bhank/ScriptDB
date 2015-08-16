@@ -209,21 +209,29 @@ just a single database is specified in the connection string to be scripted.
         {
             Console.Error.WriteLine(@"
 
-Connect to the Northwind database on localhost using trusted auth,
+1. Connect to the Northwind database on localhost using trusted auth,
 and script the schema of all tables, views, and stored procedures
 whose names start with ""cust"", and the data from all tables
-regardless of their names, into the scripts directory,
+regardless of their names, to files under the scripts\Northwind directory,
 deleting its contents first:
 
   scriptdb.exe -d Northwind --tables=cust* --views=cust* --storedprocs=cust*
-    --scriptdata --purge --outdir=scripts
+    --datatables --purge --outdir=scripts
 
 
 2. Connect to the Orders database on DBSERVER using a SQL login,
-and script all objects and data to a single file.
+and script all objects and data to a single file, AllScripts.sql:
 
   scriptdb.exe -S DBSERVER -U mylogin -P mypassword -D Orders
-    --tables --views --sps --scriptdata --outfile=AllScripts.sql
+    --tables --views --sps --datatables --outfile=AllScripts.sql
+
+3. Connect to DBSERVER using a SQL login, and script the data
+for the SQL Agent job tables to CSV files under the testscripts\msdb directory,
+after deleting existing files:
+
+  scriptdb.exe -S DBSERVER -U mylogin -P mypassword -D msdb
+    --datatables=sysjob* --dataformat=csv --includesystem
+    --outdir=testscripts --purge
 
 ");
         }
