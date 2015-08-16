@@ -103,6 +103,17 @@ namespace Elsasoft.ScriptDb
                 if (verbose) Console.Error.WriteLine("Done");
             }
 
+            if (!string.IsNullOrEmpty(OutputFileName) && File.Exists(OutputFileName))
+            {
+                try
+                {
+                    File.Delete(OutputFileName);
+                }
+                catch (Exception e)
+                {
+                    Console.Error.Write("Error deleting output file {0}: {1}", OutputFileName, e.Message);
+                }
+            }
 
             if (scriptAllDatabases)
             {
