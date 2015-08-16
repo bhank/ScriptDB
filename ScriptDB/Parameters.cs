@@ -129,7 +129,10 @@ namespace ScriptDb
             }
             else if (!string.IsNullOrWhiteSpace(p.OutputFileName) && ((p.DataScriptingFormat & DataScriptingFormat.Bcp) == DataScriptingFormat.Bcp || (p.DataScriptingFormat & DataScriptingFormat.Csv) == DataScriptingFormat.Csv))
             {
-                error = "When writing to a single output file, you can only script data in SQL format.";
+                error = "When writing to a single output file, you can only script data in SQL format";
+            } else if (!string.IsNullOrWhiteSpace(p.OutputFileName) && p.TableOneFile)
+            {
+                error = "When writing to a single output file, --tableonefile is redundant";
             }
 
             if (p.Help)
