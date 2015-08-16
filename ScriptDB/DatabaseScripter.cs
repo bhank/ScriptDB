@@ -518,7 +518,7 @@ namespace Elsasoft.ScriptDb
             {
                 return true;
             }
-            if (DatabaseTableDataFilter != null && DatabaseTableDataFilter.ContainsKey(databaseName) && MatchesFilter(DatabaseTableDataFilter[databaseName], tableName))
+            if (DatabaseTableDataFilter != null && DatabaseTableDataFilter.ContainsKey(databaseName.ToUpperInvariant()) && MatchesFilter(DatabaseTableDataFilter[databaseName.ToUpperInvariant()], tableName))
             {
                 return true;
             }
