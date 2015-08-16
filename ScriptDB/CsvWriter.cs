@@ -129,7 +129,7 @@ namespace Utils
 
             for (int i = 0; i < content.Length; ++i)
             {
-                s = (content[i] != null ? content[i].ToString() : "");
+                s = (content[i] != null ? ConvertToString(content[i]) : "");
                 s = QuoteIfNecessary(s);
                 Write(s);
 
@@ -138,6 +138,30 @@ namespace Utils
                     Write(separator);
             }
             Write(NewLine);
+        }
+
+        private static string ConvertToString(object o)
+        {
+            if (o.GetType() == typeof (byte[]))
+            {
+                return "0x" + BitConverter.ToString((byte[]) o).Replace("-", "");
+            }
+
+            if (o is DateTime)
+            {
+                var dateTime = (DateTime) o;
+                if (dateTime.TimeOfDay == TimeSpan.Zero)
+                {
+                    return dateTime.ToString("yyyy-MM-dd");
+                }
+                if (dateTime.Date == DateTime.MinValue)
+                {
+                    return dateTime.ToString("HH:mm:ss.fff");
+                }
+                return dateTime.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            }
+
+            return o.ToString();
         }
 
         private string QuoteIfNecessary(string s)
