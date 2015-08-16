@@ -56,7 +56,6 @@ namespace ScriptDb
             var p = new Parameters
                 {
                     Server = "localhost",
-                    DataScriptingFormat = DataScriptingFormat.Sql,
                 };
 
             var optionSet = new OptionSet
@@ -160,6 +159,12 @@ namespace ScriptDb
                 Console.Error.WriteLine("Pass --help for usage information.");
                 return false;
             }
+
+            if (p.DataScriptingFormat == DataScriptingFormat.None)
+            {
+                p.DataScriptingFormat = DataScriptingFormat.Sql;
+            }
+
             parameters = p;
             return true;
         }
