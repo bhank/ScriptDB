@@ -205,7 +205,7 @@ namespace Elsasoft.ScriptDb
 
             foreach (Index smo in tableOrView.Indexes)
             {
-                if (!smo.IsSystemObject)
+                if (IncludeSystemObjects || !smo.IsSystemObject)
                 {
                     string dir =
                         (smo.IndexKeyType == IndexKeyType.DriPrimaryKey) ? primaryKeys :
@@ -244,7 +244,7 @@ namespace Elsasoft.ScriptDb
 
             foreach (Table table in db.Tables)
             {
-                if (!table.IsSystemObject)
+                if (IncludeSystemObjects || !table.IsSystemObject)
                 {
                     if (!FilterExists() || MatchesFilter(TableFilter, table.Name))
                     {
@@ -292,7 +292,7 @@ namespace Elsasoft.ScriptDb
 
             foreach (Trigger smo in table.Triggers)
             {
-                if (!smo.IsSystemObject && !smo.IsEncrypted)
+                if ((IncludeSystemObjects || !smo.IsSystemObject) && !smo.IsEncrypted)
                 {
                     if (!TableOneFile)
                         fileName = Path.Combine(triggers, GetScriptFileName(table, smo));
@@ -588,7 +588,7 @@ namespace Elsasoft.ScriptDb
 
             foreach (StoredProcedure smo in db.StoredProcedures)
             {
-                if (!smo.IsSystemObject && !smo.IsEncrypted)
+                if ((IncludeSystemObjects || !smo.IsSystemObject) && !smo.IsEncrypted)
                 {
                     if (!FilterExists() || MatchesFilter(SprocsFilter, smo.Name))
                     {
@@ -628,7 +628,7 @@ namespace Elsasoft.ScriptDb
 
             foreach (View smo in db.Views)
             {
-                if (!smo.IsSystemObject && !smo.IsEncrypted)
+                if ((IncludeSystemObjects || !smo.IsSystemObject) && !smo.IsEncrypted)
                 {
                     if (!FilterExists() || MatchesFilter(ViewsFilter, smo.Name))
                     {
@@ -669,7 +669,7 @@ namespace Elsasoft.ScriptDb
             foreach (UserDefinedFunction smo in db.UserDefinedFunctions)
             {
 
-                if (!smo.IsSystemObject && !smo.IsEncrypted)
+                if ((IncludeSystemObjects || !smo.IsSystemObject) && !smo.IsEncrypted)
                 {
                     if (!FilterExists() || MatchesFilter(UdfsFilter, smo.Name))
                     {
@@ -1177,6 +1177,7 @@ namespace Elsasoft.ScriptDb
         public bool CreateOnly { get; set; }
         public string OutputFileName { get; set; }
         public bool IncludeDatabase { get; set; }
+        public bool IncludeSystemObjects { get; set; }
         public string PreScriptingCommand { get; set; }
         public string PostScriptingCommand { get; set; }
         public string StartCommand { get; set; }

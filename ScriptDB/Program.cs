@@ -94,6 +94,7 @@ namespace Elsasoft.ScriptDb
                 ds.NoCollation = parameters.NoCollation;
                 ds.Statistics = parameters.ScriptStatistics;
                 ds.IncludeDatabase = parameters.ScriptDatabase;
+                ds.IncludeSystemObjects = parameters.IncludeSystemObjects;
                 ds.CreateOnly = parameters.ScriptCreateOnly;
                 ds.OutputFileName = parameters.OutputFileName;
                 ds.StartCommand = parameters.StartCommand;

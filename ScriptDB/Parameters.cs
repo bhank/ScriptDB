@@ -43,6 +43,7 @@ namespace ScriptDb
         public bool NoCollation { get; private set; }
         public bool ScriptStatistics { get; private set; }
         public bool ScriptDatabase { get; private set; }
+        public bool IncludeSystemObjects { get; private set; }
         public string StartCommand { get; private set; }
         public string PreScriptingCommand { get; private set; }
         public string PostScriptingCommand { get; private set; }
@@ -93,6 +94,7 @@ namespace ScriptDb
                     {"permissions|scriptpermissions", "Script permissions.", v => p.ScriptPermissions = (v != null)},
                     {"statistics|scriptstatistics", "Script statistics.", v => p.ScriptStatistics = (v != null)},
                     {"nocollation", "Skip scripting collation.", v => p.NoCollation = (v != null)}, // TODO: fix boolean... invert to make like normal options
+                    {"includesystem","Include system objects (normally skipped).", v => p.IncludeSystemObjects = (v != null)},
                     {"startcommand=", "{COMMAND} to run on startup.", v => p.StartCommand = v},
                     {"prescriptingcommand=", "{COMMAND} to run before scripting each database.", v => p.PreScriptingCommand = v},
                     {"postscriptingcommand=", "{COMMAND} to run after scripting each database.", v => p.PostScriptingCommand = v},
