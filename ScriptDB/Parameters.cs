@@ -225,14 +225,14 @@ deleting its contents first:
 2. Connect to the Orders database on DBSERVER using a SQL login,
 and script all objects and data to a single file, AllScripts.sql:
 
-  scriptdb.exe -S DBSERVER -U mylogin -P mypassword -D Orders
+  scriptdb.exe -S DBSERVER -U mylogin -P mypassword -d Orders
     --tables --views --sps --datatables --outfile=AllScripts.sql
 
 3. Connect to DBSERVER using a SQL login, and script the data
 for the SQL Agent job tables to CSV files under the testscripts\msdb directory,
 after deleting existing files:
 
-  scriptdb.exe -S DBSERVER -U mylogin -P mypassword -D msdb
+  scriptdb.exe -S DBSERVER -U mylogin -P mypassword -d msdb
     --datatables=sysjob* --dataformat=csv --includesystem
     --outdir=testscripts --purge
 
