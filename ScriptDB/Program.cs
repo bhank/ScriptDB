@@ -88,6 +88,7 @@ namespace Elsasoft.ScriptDb
                 }
                 ds.ViewsFilter = parameters.ViewFilter.ToArray();
                 ds.SprocsFilter = parameters.StoredProcedureFilter.ToArray();
+                ds.UdfsFilter = parameters.UserDefinedFunctionFilter.ToArray();
                 ds.TableOneFile = parameters.TableOneFile;
                 ds.ScriptAsCreate = parameters.ScriptAsCreate;
                 ds.Permissions = parameters.ScriptPermissions;

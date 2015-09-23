@@ -15,6 +15,7 @@ namespace ScriptDb
             TableDataFilter = new List<string>();
             ViewFilter = new List<string>();
             StoredProcedureFilter = new List<string>();
+            UserDefinedFunctionFilter = new List<string>();
         }
 
         public bool Help { get; private set; }
@@ -36,6 +37,7 @@ namespace ScriptDb
         public string TableDataFilterFile { get; private set; }
         public List<string> ViewFilter { get; private set; }
         public List<string> StoredProcedureFilter { get; private set; }
+        public List<string> UserDefinedFunctionFilter { get; private set; }
         public bool TableOneFile { get; private set; }
         public bool ScriptAsCreate { get; private set; }
         public bool ScriptCreateOnly { get; private set; }
@@ -86,6 +88,7 @@ namespace ScriptDb
                     {"tables:", "Script table schema, optionally specifying {NAME}s of tables. (Default all)", v => AddFilter(p.TableFilter, v)},
                     {"views:", "Script view schema, optionally specifying {NAME}s of views. (Default all)", v => AddFilter(p.ViewFilter, v)},
                     {"sps|storedprocs|storedprocedures:", "Script stored procedures, optionally specifying {NAME}s. (Default all)", v => AddFilter(p.StoredProcedureFilter, v)},
+                    {"udfs|functions|userdefinedfunctions:", "Script user-defined functions, optionally specifying {NAME}s. (Default all)", v => AddFilter(p.UserDefinedFunctionFilter, v)},
                     {"tableonefile", "Script all parts of a table to a single file.", v => p.TableOneFile = (v != null)},
                     {"scriptascreate|scriptstoredproceduresascreate", "Script stored procedures as CREATE instead of ALTER.", v => p.ScriptAsCreate = (v != null)},
                     {"createonly", "Do not generate DROP statements.", v => p.ScriptCreateOnly = (v != null)},
@@ -189,7 +192,7 @@ namespace ScriptDb
             optionSet.WriteOptionDescriptions(Console.Error);
             Console.Error.WriteLine(@"
 
-If you do not pass any of the filter parameters --tables, --datatables,
+If you do not pass any of the filter parameters --tables, --datatables, --udfs,
 --views, or --storedprocedures, then schema for all objects will be scripted.
 (Data is only scripted if --datatables is passed.) If you do pass a filter
 parameter, then you must specify all the objects you want scripted. For
@@ -226,7 +229,7 @@ deleting its contents first:
 and script all objects and data to a single file, AllScripts.sql:
 
   scriptdb.exe -S DBSERVER -U mylogin -P mypassword -d Orders
-    --tables --views --sps --datatables --outfile=AllScripts.sql
+    --tables --views --sps --udfs --datatables --outfile=AllScripts.sql
 
 3. Connect to DBSERVER using a SQL login, and script the data
 for the SQL Agent job tables to CSV files under the testscripts\msdb directory,
