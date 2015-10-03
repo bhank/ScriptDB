@@ -73,6 +73,8 @@ namespace Elsasoft.ScriptDb
             s.SetDefaultInitFields(typeof(Table), "IsSystemObject");
             s.SetDefaultInitFields(typeof(View), "IsSystemObject", "IsEncrypted");
             s.SetDefaultInitFields(typeof(UserDefinedFunction), "IsSystemObject", "IsEncrypted");
+            s.SetDefaultInitFields(typeof(DatabaseDdlTrigger), "IsSystemObject", "IsEncrypted");
+            s.SetDefaultInitFields(typeof(Schema), "IsSystemObject");
             s.ConnectionContext.SqlExecutionModes = SqlExecutionModes.CaptureSql;
 
             RunCommand(StartCommand, verbose, outputDirectory, s.Name, null);
@@ -825,22 +827,25 @@ namespace Elsasoft.ScriptDb
 
             foreach (DatabaseDdlTrigger smo in db.Triggers)
             {
-                if (!FilterExists() || MatchesFilter(FilterType.DdlTrigger, smo.Name))
+                if ((IncludeSystemObjects || !smo.IsSystemObject) && !smo.IsEncrypted)
                 {
-                    using (StreamWriter sw = GetStreamWriter(Path.Combine(triggers, FixUpFileName(smo.Name) + ".sql"), false))
+                    if (!FilterExists() || MatchesFilter(FilterType.DdlTrigger, smo.Name))
                     {
-                        if (verbose) Console.Error.WriteLine("[{0}]: [{1}]", db.Name, smo.Name);
-                        if (!CreateOnly)
+                        using (StreamWriter sw = GetStreamWriter(Path.Combine(triggers, FixUpFileName(smo.Name) + ".sql"), false))
                         {
-                            so.ScriptDrops = so.IncludeIfNotExists = true;
+                            if (verbose) Console.Error.WriteLine("[{0}]: [{1}]", db.Name, smo.Name);
+                            if (!CreateOnly)
+                            {
+                                so.ScriptDrops = so.IncludeIfNotExists = true;
+                                WriteScript(smo.Script(so), sw);
+                            }
+                            so.ScriptDrops = so.IncludeIfNotExists = false;
                             WriteScript(smo.Script(so), sw);
-                        }
-                        so.ScriptDrops = so.IncludeIfNotExists = false;
-                        WriteScript(smo.Script(so), sw);
 
-                        if (Properties)
-                        {
-                            ScriptProperties(smo, sw);
+                            if (Properties)
+                            {
+                                ScriptProperties(smo, sw);
+                            }
                         }
                     }
                 }
@@ -854,37 +859,25 @@ namespace Elsasoft.ScriptDb
 
             foreach (Schema smo in db.Schemas)
             {
-                // IsSystemObject doesn't exist for schemas.  Bad Cip!!!
-                if (smo.Name == "sys" ||
-                    smo.Name == "dbo" ||
-                    smo.Name == "db_accessadmin" ||
-                    smo.Name == "db_backupoperator" ||
-                    smo.Name == "db_datareader" ||
-                    smo.Name == "db_datawriter" ||
-                    smo.Name == "db_ddladmin" ||
-                    smo.Name == "db_denydatawriter" ||
-                    smo.Name == "db_denydatareader" ||
-                    smo.Name == "db_owner" ||
-                    smo.Name == "db_securityadmin" ||
-                    smo.Name == "INFORMATION_SCHEMA" ||
-                    smo.Name == "guest") continue;
-
-                if (!FilterExists() || MatchesFilter(FilterType.Schema, smo.Name))
+                if (IncludeSystemObjects || !smo.IsSystemObject)
                 {
-                    using (StreamWriter sw = GetStreamWriter(Path.Combine(schemas, FixUpFileName(smo.Name) + ".sql"), false))
+                    if (!FilterExists() || MatchesFilter(FilterType.Schema, smo.Name))
                     {
-                        if (verbose) Console.Error.WriteLine("[{0}]: [{1}]", db.Name, smo.Name);
-                        if (!CreateOnly)
+                        using (StreamWriter sw = GetStreamWriter(Path.Combine(schemas, FixUpFileName(smo.Name) + ".sql"), false))
                         {
-                            so.ScriptDrops = so.IncludeIfNotExists = true;
+                            if (verbose) Console.Error.WriteLine("[{0}]: [{1}]", db.Name, smo.Name);
+                            if (!CreateOnly)
+                            {
+                                so.ScriptDrops = so.IncludeIfNotExists = true;
+                                WriteScript(smo.Script(so), sw);
+                            }
+                            so.ScriptDrops = so.IncludeIfNotExists = false;
                             WriteScript(smo.Script(so), sw);
-                        }
-                        so.ScriptDrops = so.IncludeIfNotExists = false;
-                        WriteScript(smo.Script(so), sw);
 
-                        if (Properties)
-                        {
-                            ScriptProperties(smo, sw);
+                            if (Properties)
+                            {
+                                ScriptProperties(smo, sw);
+                            }
                         }
                     }
                 }
