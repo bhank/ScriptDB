@@ -46,27 +46,9 @@ namespace Elsasoft.ScriptDb
 {
     public class DatabaseScripter
     {
-        public DatabaseScripter()
-        {
-            TableFilter = new string[0];
-            TableDataFilter = new string[0];
-            RulesFilter = new string[0];
-            DefaultsFilter = new string[0];
-            UddtsFilter = new string[0];
-            UdfsFilter = new string[0];
-            ViewsFilter = new string[0];
-            SprocsFilter = new string[0];
-            UdtsFilter = new string[0];
-            SchemasFilter = new string[0];
-            DdlTriggersFilter = new string[0];
-        }
-
         private bool FilterExists()
         {
-            return TableFilter.Length > 0 || RulesFilter.Length > 0 || DefaultsFilter.Length > 0
-                   || UddtsFilter.Length > 0 || UdfsFilter.Length > 0 || ViewsFilter.Length > 0
-                   || SprocsFilter.Length > 0 || UdtsFilter.Length > 0 || SchemasFilter.Length > 0
-                   || DdlTriggersFilter.Length > 0 || TableDataFilter.Length > 0;
+            return Filters.Count > 0;
         }
 
         /// <summary>
@@ -256,7 +238,7 @@ namespace Elsasoft.ScriptDb
             {
                 if (IncludeSystemObjects || !table.IsSystemObject)
                 {
-                    if (!FilterExists() || MatchesFilter(TableFilter, table.Name))
+                    if (!FilterExists() || MatchesFilter(FilterType.Table, table.Name))
                     {
                         ScriptTable(verbose, db, so, tables, table, triggers, fullTextIndexes, foreignKeys, constraints);
                     }
@@ -394,6 +376,16 @@ namespace Elsasoft.ScriptDb
             #endregion
         }
 
+        private bool MatchesFilter(FilterType filterType, string name)
+        {
+            List<string> filterList;
+            if (Filters.TryGetValue(filterType, out filterList))
+            {
+                return MatchesFilter(filterList, name);
+            }
+            return false;
+        }
+
         private static bool MatchesFilter(IEnumerable<string> filter, string name)
         {
             return filter.Any(filterItem => MatchesWildcard(name, filterItem));
@@ -509,12 +501,7 @@ namespace Elsasoft.ScriptDb
 
         private bool MatchesTableDataFilters(string databaseName, string tableName)
         {
-            if(TableDataFilter.Length == 0 && DatabaseTableDataFilter == null)
-            {
-                return false;
-            }
-
-            if (MatchesFilter(TableDataFilter, tableName))
+            if (MatchesFilter(FilterType.TableData, tableName))
             {
                 return true;
             }
@@ -600,7 +587,7 @@ namespace Elsasoft.ScriptDb
             {
                 if ((IncludeSystemObjects || !smo.IsSystemObject) && !smo.IsEncrypted)
                 {
-                    if (!FilterExists() || MatchesFilter(SprocsFilter, smo.Name))
+                    if (!FilterExists() || MatchesFilter(FilterType.StoredProcedure, smo.Name))
                     {
                         using (StreamWriter sw = GetStreamWriter(Path.Combine(sprocs, GetScriptFileName(smo)), false))
                         {
@@ -640,7 +627,7 @@ namespace Elsasoft.ScriptDb
             {
                 if ((IncludeSystemObjects || !smo.IsSystemObject) && !smo.IsEncrypted)
                 {
-                    if (!FilterExists() || MatchesFilter(ViewsFilter, smo.Name))
+                    if (!FilterExists() || MatchesFilter(FilterType.View, smo.Name))
                     {
                         using (StreamWriter sw = GetStreamWriter(Path.Combine(views, GetScriptFileName(smo)), false))
                         {
@@ -681,7 +668,7 @@ namespace Elsasoft.ScriptDb
 
                 if ((IncludeSystemObjects || !smo.IsSystemObject) && !smo.IsEncrypted)
                 {
-                    if (!FilterExists() || MatchesFilter(UdfsFilter, smo.Name))
+                    if (!FilterExists() || MatchesFilter(FilterType.UserDefinedFunction, smo.Name))
                     {
                         using (StreamWriter sw = GetStreamWriter(Path.Combine(udfs, GetScriptFileName(smo)), false))
                         {
@@ -713,7 +700,7 @@ namespace Elsasoft.ScriptDb
 
             foreach (UserDefinedType smo in db.UserDefinedTypes)
             {
-                if (!FilterExists() || MatchesFilter(UdtsFilter, smo.Name))
+                if (!FilterExists() || MatchesFilter(FilterType.UserDefinedType, smo.Name))
                 {
                     using (StreamWriter sw = GetStreamWriter(Path.Combine(types, GetScriptFileName(smo)), false))
                     {
@@ -744,7 +731,7 @@ namespace Elsasoft.ScriptDb
 
             foreach (UserDefinedDataType smo in db.UserDefinedDataTypes)
             {
-                if (!FilterExists() || MatchesFilter(UddtsFilter, smo.Name))
+                if (!FilterExists() || MatchesFilter(FilterType.UserDefinedDataType, smo.Name))
                 {
                     using (StreamWriter sw = GetStreamWriter(Path.Combine(types, GetScriptFileName(smo)), false))
                     {
@@ -776,7 +763,7 @@ namespace Elsasoft.ScriptDb
 
             foreach (Rule smo in db.Rules)
             {
-                if (!FilterExists() || MatchesFilter(RulesFilter, smo.Name))
+                if (!FilterExists() || MatchesFilter(FilterType.Rule, smo.Name))
                 {
                     using (StreamWriter sw = GetStreamWriter(Path.Combine(rules, GetScriptFileName(smo)), false))
                     {
@@ -807,7 +794,7 @@ namespace Elsasoft.ScriptDb
 
             foreach (Default smo in db.Defaults)
             {
-                if (!FilterExists() || MatchesFilter(DefaultsFilter, smo.Name))
+                if (!FilterExists() || MatchesFilter(FilterType.Default, smo.Name))
                 {
                     using (StreamWriter sw = GetStreamWriter(Path.Combine(defaults, GetScriptFileName(smo)), false))
                     {
@@ -838,7 +825,7 @@ namespace Elsasoft.ScriptDb
 
             foreach (DatabaseDdlTrigger smo in db.Triggers)
             {
-                if (!FilterExists() || MatchesFilter(DdlTriggersFilter, smo.Name))
+                if (!FilterExists() || MatchesFilter(FilterType.DdlTrigger, smo.Name))
                 {
                     using (StreamWriter sw = GetStreamWriter(Path.Combine(triggers, FixUpFileName(smo.Name) + ".sql"), false))
                     {
@@ -882,7 +869,7 @@ namespace Elsasoft.ScriptDb
                     smo.Name == "INFORMATION_SCHEMA" ||
                     smo.Name == "guest") continue;
 
-                if (!FilterExists() || MatchesFilter(SchemasFilter, smo.Name))
+                if (!FilterExists() || MatchesFilter(FilterType.Schema, smo.Name))
                 {
                     using (StreamWriter sw = GetStreamWriter(Path.Combine(schemas, FixUpFileName(smo.Name) + ".sql"), false))
                     {
@@ -1169,18 +1156,8 @@ namespace Elsasoft.ScriptDb
 
         #region Public Properties
 
-        public string[] TableFilter { get; set; }
-        public string[] TableDataFilter { get; set; }
+        public Dictionary<FilterType, List<string>> Filters { get; set; }
         public Dictionary<string, List<string>> DatabaseTableDataFilter { get; set; }
-        public string[] RulesFilter { get; set; }
-        public string[] DefaultsFilter { get; set; }
-        public string[] UddtsFilter { get; set; }
-        public string[] UdfsFilter { get; set; }
-        public string[] ViewsFilter { get; set; }
-        public string[] SprocsFilter { get; set; }
-        public string[] UdtsFilter { get; set; }
-        public string[] SchemasFilter { get; set; }
-        public string[] DdlTriggersFilter { get; set; }
         public bool TableOneFile { get; set; }
         public bool ScriptAsCreate { get; set; }
         public bool Properties { get; set; }

@@ -11,14 +11,7 @@ namespace ScriptDb
     {
         public Parameters()
         {
-            TableFilter = new List<string>();
-            TableDataFilter = new List<string>();
-            ViewFilter = new List<string>();
-            StoredProcedureFilter = new List<string>();
-            UserDefinedFunctionFilter = new List<string>();
-            UserDefinedDataTypeFilter = new List<string>();
-            DefaultFilter = new List<string>();
-            RuleFilter = new List<string>();
+            Filters = new Dictionary<FilterType, List<string>>();
         }
 
         public bool Help { get; private set; }
@@ -35,15 +28,8 @@ namespace ScriptDb
         public bool ScriptProperties { get; private set; }
         public bool Purge { get; private set; }
         public bool ScriptAllDatabases { get; private set; }
-        public List<string> TableFilter { get; private set; }
-        public List<string> TableDataFilter { get; private set; }
+        public Dictionary<FilterType, List<string>> Filters { get; set; }
         public string TableDataFilterFile { get; private set; }
-        public List<string> ViewFilter { get; private set; }
-        public List<string> StoredProcedureFilter { get; private set; }
-        public List<string> UserDefinedFunctionFilter { get; private set; }
-        public List<string> UserDefinedDataTypeFilter { get; private set; }
-        public List<string> DefaultFilter { get; private set; }
-        public List<string> RuleFilter { get; private set; }
         public bool TableOneFile { get; private set; }
         public bool ScriptAsCreate { get; private set; }
         public bool ScriptCreateOnly { get; private set; }
@@ -89,16 +75,16 @@ namespace ScriptDb
                                 Enum.TryParse(v, true, out d);
                                 p.DataScriptingFormat |= d; // You can specify multiple formats in separate parameters
                         }},
-                    {"datatables:", "Script table data, optionally specifying {NAME}s of tables. (Default all)", v => AddFilter(p.TableDataFilter, v)},
+                    {"datatables:", "Script table data, optionally specifying {NAME}s of tables. (Default all)", v => p.AddFilter(FilterType.TableData, v)},
                     {"datatablefile=", "{FILENAME} containing tables for which to script data for each database name. File format:\ndatabase:table1,table2,table3", v => p.TableDataFilterFile = v},
-                    {"tables:", "Script table schema, optionally specifying {NAME}s of tables. (Default all)", v => AddFilter(p.TableFilter, v)},
-                    {"views:", "Script view schema, optionally specifying {NAME}s of views. (Default all)", v => AddFilter(p.ViewFilter, v)},
-                    {"sps|storedprocs|storedprocedures:", "Script stored procedures, optionally specifying {NAME}s. (Default all)", v => AddFilter(p.StoredProcedureFilter, v)},
-                    {"udfs|functions|userdefinedfunctions:", "Script user-defined functions, optionally specifying {NAME}s. (Default all)", v => AddFilter(p.UserDefinedFunctionFilter, v)},
-                    {"udts|types|userdefineddatatypes:", "Script user-defined data types, optionally specifying {NAME}s. (Default all)", v => AddFilter(p.UserDefinedDataTypeFilter, v)},
-                    {"defaults:", "Script defaults, optionally specifying {NAME}s. (Default all)", v => AddFilter(p.DefaultFilter, v)},
-                    {"rules:", "Script rules, optionally specifying {NAME}s. (Default all)", v => AddFilter(p.RuleFilter, v)},
-                    {"all|scriptallobjects", "Script all objects. This is the default, but you can follow this with other filter parameters to limit certain objects.", v => AddAllFilters()},
+                    {"tables:", "Script table schema, optionally specifying {NAME}s of tables. (Default all)", v => p.AddFilter(FilterType.Table, v)},
+                    {"views:", "Script view schema, optionally specifying {NAME}s of views. (Default all)", v => p.AddFilter(FilterType.View, v)},
+                    {"sps|storedprocs|storedprocedures:", "Script stored procedures, optionally specifying {NAME}s. (Default all)", v => p.AddFilter(FilterType.StoredProcedure, v)},
+                    {"udfs|functions|userdefinedfunctions:", "Script user-defined functions, optionally specifying {NAME}s. (Default all)", v => p.AddFilter(FilterType.UserDefinedFunction, v)},
+                    {"udts|types|userdefineddatatypes:", "Script user-defined data types, optionally specifying {NAME}s. (Default all)", v => p.AddFilter(FilterType.UserDefinedDataType, v)},
+                    {"defaults:", "Script defaults, optionally specifying {NAME}s. (Default all)", v => p.AddFilter(FilterType.Default, v)},
+                    {"rules:", "Script rules, optionally specifying {NAME}s. (Default all)", v => p.AddFilter(FilterType.Rule, v)},
+                    {"all|scriptallobjects", "Script all objects. This is the default, but you can specify other filter parameters to limit certain objects.", v => p.AddAllFilters()},
                     {"tableonefile", "Script all parts of a table to a single file.", v => p.TableOneFile = (v != null)},
                     {"scriptascreate|scriptstoredproceduresascreate", "Script stored procedures as CREATE instead of ALTER.", v => p.ScriptAsCreate = (v != null)},
                     {"createonly", "Do not generate DROP statements.", v => p.ScriptCreateOnly = (v != null)},
@@ -185,6 +171,17 @@ namespace ScriptDb
             return true;
         }
 
+        private void AddFilter(FilterType filterType, string parameter)
+        {
+            List<string> filterList;
+            if (!Filters.TryGetValue(filterType, out filterList))
+            {
+                filterList = new List<string>();
+                Filters.Add(filterType, filterList);
+            }
+            AddFilter(filterList, parameter);
+        }
+
         private static void AddFilter(List<string> filterList, string parameter)
         {
             if (parameter == null)
@@ -199,9 +196,9 @@ namespace ScriptDb
 
         private void AddAllFilters()
         {
-            foreach (var filter in new[] {TableFilter, TableDataFilter, ViewFilter, StoredProcedureFilter, UserDefinedFunctionFilter, UserDefinedDataTypeFilter, DefaultFilter, RuleFilter, })
+            foreach(FilterType filterType in Enum.GetValues(typeof(FilterType)))
             {
-                AddFilter(filter, null);
+                AddFilter(filterType, null);
             }
         }
 

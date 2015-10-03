@@ -80,6 +80,7 @@
     <Compile Include="CsvWriter.cs" />
     <Compile Include="DatabaseScripter.cs" />
     <Compile Include="DataScriptingFormat.cs" />
+    <Compile Include="FilterType.cs" />
     <Compile Include="Options.cs" />
     <Compile Include="Parameters.cs" />
     <Compile Include="Program.cs" />
