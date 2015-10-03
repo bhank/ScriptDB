@@ -190,7 +190,7 @@ namespace ScriptDb
             }
             else
             {
-                filterList.AddRange(parameter.ToUpperInvariant().Split(new[] {','}, StringSplitOptions.RemoveEmptyEntries));
+                filterList.AddRange(parameter.Split(new[] {','}, StringSplitOptions.RemoveEmptyEntries));
             }
         }
 

@@ -156,7 +156,7 @@ namespace Elsasoft.ScriptDb
                 }
                 var parts = line.Split(new[] {':'}, 2);
                 var databaseName = parts[0];
-                var tableNames = parts[1].ToUpperInvariant().Split(',');
+                var tableNames = parts[1].Split(',');
                 tablesByDatabase.Add(databaseName, new List<string>(tableNames));
             }
             return tablesByDatabase;
