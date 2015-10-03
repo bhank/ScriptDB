@@ -198,7 +198,10 @@ namespace ScriptDb
         {
             foreach(FilterType filterType in Enum.GetValues(typeof(FilterType)))
             {
-                AddFilter(filterType, null);
+                if (filterType != FilterType.TableData) // TableData is separate, since it's data, not schema
+                {
+                    AddFilter(filterType, null);
+                }
             }
         }
 
