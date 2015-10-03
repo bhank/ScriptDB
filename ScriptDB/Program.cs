@@ -146,7 +146,7 @@ namespace Elsasoft.ScriptDb
 
         private static Dictionary<string, List<string>> ReadTableDataFile(string tableDataFile)
         {
-            var tablesByDatabase = new Dictionary<string, List<string>>();
+            var tablesByDatabase = new Dictionary<string, List<string>>(StringComparer.InvariantCultureIgnoreCase);
             var lines = File.ReadAllLines(tableDataFile);
             foreach(var line in lines)
             {
@@ -155,7 +155,7 @@ namespace Elsasoft.ScriptDb
                     continue;
                 }
                 var parts = line.Split(new[] {':'}, 2);
-                var databaseName = parts[0].ToUpperInvariant();
+                var databaseName = parts[0];
                 var tableNames = parts[1].ToUpperInvariant().Split(',');
                 tablesByDatabase.Add(databaseName, new List<string>(tableNames));
             }
