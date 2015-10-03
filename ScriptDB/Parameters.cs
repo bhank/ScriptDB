@@ -16,6 +16,9 @@ namespace ScriptDb
             ViewFilter = new List<string>();
             StoredProcedureFilter = new List<string>();
             UserDefinedFunctionFilter = new List<string>();
+            UserDefinedDataTypeFilter = new List<string>();
+            DefaultFilter = new List<string>();
+            RuleFilter = new List<string>();
         }
 
         public bool Help { get; private set; }
@@ -38,6 +41,9 @@ namespace ScriptDb
         public List<string> ViewFilter { get; private set; }
         public List<string> StoredProcedureFilter { get; private set; }
         public List<string> UserDefinedFunctionFilter { get; private set; }
+        public List<string> UserDefinedDataTypeFilter { get; private set; }
+        public List<string> DefaultFilter { get; private set; }
+        public List<string> RuleFilter { get; private set; }
         public bool TableOneFile { get; private set; }
         public bool ScriptAsCreate { get; private set; }
         public bool ScriptCreateOnly { get; private set; }
@@ -89,6 +95,10 @@ namespace ScriptDb
                     {"views:", "Script view schema, optionally specifying {NAME}s of views. (Default all)", v => AddFilter(p.ViewFilter, v)},
                     {"sps|storedprocs|storedprocedures:", "Script stored procedures, optionally specifying {NAME}s. (Default all)", v => AddFilter(p.StoredProcedureFilter, v)},
                     {"udfs|functions|userdefinedfunctions:", "Script user-defined functions, optionally specifying {NAME}s. (Default all)", v => AddFilter(p.UserDefinedFunctionFilter, v)},
+                    {"udts|types|userdefineddatatypes:", "Script user-defined data types, optionally specifying {NAME}s. (Default all)", v => AddFilter(p.UserDefinedDataTypeFilter, v)},
+                    {"defaults:", "Script defaults, optionally specifying {NAME}s. (Default all)", v => AddFilter(p.DefaultFilter, v)},
+                    {"rules:", "Script rules, optionally specifying {NAME}s. (Default all)", v => AddFilter(p.RuleFilter, v)},
+                    {"all|scriptallobjects", "Script all objects. This is the default, but you can follow this with other filter parameters to limit certain objects.", v => AddAllFilters()},
                     {"tableonefile", "Script all parts of a table to a single file.", v => p.TableOneFile = (v != null)},
                     {"scriptascreate|scriptstoredproceduresascreate", "Script stored procedures as CREATE instead of ALTER.", v => p.ScriptAsCreate = (v != null)},
                     {"createonly", "Do not generate DROP statements.", v => p.ScriptCreateOnly = (v != null)},
@@ -187,6 +197,14 @@ namespace ScriptDb
             }
         }
 
+        private void AddAllFilters()
+        {
+            foreach (var filter in new[] {TableFilter, TableDataFilter, ViewFilter, StoredProcedureFilter, UserDefinedFunctionFilter, UserDefinedDataTypeFilter, DefaultFilter, RuleFilter, })
+            {
+                AddFilter(filter, null);
+            }
+        }
+
         private static void ShowUsage(OptionSet optionSet)
         {
             optionSet.WriteOptionDescriptions(Console.Error);
@@ -198,6 +216,12 @@ If you do not pass any of the filter parameters --tables, --datatables, --udfs,
 parameter, then you must specify all the objects you want scripted. For
 example, passing only --tables will prevent any views or stored procedures
 from being scripted.
+
+You can also explicitly pass --all, and follow it with a more restrictive
+filter. For example, passing --all --views=cust* will script all objects,
+except only views starting with cust. Or passing --all --datatables=cust*
+will script schema for all objects, plus data for tables starting with
+cust.
 
 Commands can include these tokens:
 {path} - the output directory
