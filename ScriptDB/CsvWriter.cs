@@ -116,6 +116,10 @@ namespace Utils
             set { preserveLeadingZeroesForExcelField = value; }
         }
 
+        /// <summary>The string to put in the CSV file for a null value. Defaults to an empty string.</summary>
+        /// <example>NULL</example>
+        public static string DbNullString { get; set; }
+
         #endregion
 
         /// <summary>
@@ -129,7 +133,7 @@ namespace Utils
 
             for (int i = 0; i < content.Length; ++i)
             {
-                s = (content[i] != null ? ConvertToString(content[i]) : "");
+                s = ConvertToString(content[i]);
                 s = QuoteIfNecessary(s);
                 Write(s);
 
@@ -142,6 +146,16 @@ namespace Utils
 
         private static string ConvertToString(object o)
         {
+            if (o == null)
+            {
+                return string.Empty;
+            }
+
+            if (o == DBNull.Value)
+            {
+                return DbNullString;
+            }
+
             if (o.GetType() == typeof (byte[]))
             {
                 return "0x" + BitConverter.ToString((byte[]) o).Replace("-", "");

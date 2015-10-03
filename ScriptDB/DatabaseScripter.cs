@@ -443,6 +443,7 @@ namespace Elsasoft.ScriptDb
             var fileName = Path.ChangeExtension(Path.Combine(dataDirectory, GetScriptFileName(table)), "csv");
             using(var csvWriter = new CsvWriter(fileName))
             {
+                CsvWriter.DbNullString = "NULL";
                 var fieldNames = new string[table.Columns.Count];
                 for(var i = 0; i < table.Columns.Count; i++)
                 {
