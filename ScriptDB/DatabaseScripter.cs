@@ -116,7 +116,7 @@ namespace Elsasoft.ScriptDb
             else
             {
                 //var db = s.Databases[connection.Database]; // Doesn't fix the case of the database name.
-                var db = s.Databases.Cast<Database>().Single(d => d.Name.ToUpperInvariant() == connection.Database.ToUpperInvariant());
+                var db = s.Databases.Cast<Database>().Single(d => String.Equals(d.Name, connection.Database, StringComparison.InvariantCultureIgnoreCase));
                 if(db == null)
                 {
                     throw new Exception(string.Format("Database '{0}' was not found", connection.Database));

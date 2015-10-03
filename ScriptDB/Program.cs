@@ -62,7 +62,7 @@ namespace Elsasoft.ScriptDb
                         var s = new Server(serverConnection);
                         // Get the proper case for the database name
                         //var database = s.Databases[sc.Database.ToLowerInvariant()].Name; // If I index into the collection, the .Name property gives me back the same case I put in!
-                        var database = s.Databases.Cast<Database>().Single(d => d.Name.ToUpperInvariant() == sc.Database.ToUpperInvariant()).Name;
+                        var database = s.Databases.Cast<Database>().Single(d => String.Equals(d.Name, sc.Database, StringComparison.InvariantCultureIgnoreCase)).Name;
 
                         outputDirectory = outputDirectory.Replace("{server}", s.Name);
                         outputDirectory = outputDirectory.Replace("{serverclean}", DatabaseScripter.FixUpFileName(s.Name));
