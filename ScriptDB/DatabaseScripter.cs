@@ -504,11 +504,18 @@ namespace Elsasoft.ScriptDb
 
         private bool MatchesTableDataFilters(string databaseName, string tableName)
         {
+            var databaseTableDataFilterExists = DatabaseTableDataFilter != null && DatabaseTableDataFilter.Count > 0;
+            var isDefaultTableDataFilter = Filters != null && Filters.ContainsKey(FilterType.TableData) && Filters[FilterType.TableData].Count == 1 && Filters[FilterType.TableData][0] == "*";
+
             if (MatchesFilter(FilterType.TableData, tableName))
             {
-                return true;
+                // If "--datatables --datatablefile=..." is specified, then just matching the single wildcard filter is not good enough; it is limited by the data file.
+                if (!isDefaultTableDataFilter || !databaseTableDataFilterExists)
+                {
+                    return true;
+                }
             }
-            if (DatabaseTableDataFilter != null && DatabaseTableDataFilter.ContainsKey(databaseName) && MatchesFilter(DatabaseTableDataFilter[databaseName], tableName))
+            if (databaseTableDataFilterExists && DatabaseTableDataFilter.ContainsKey(databaseName) && MatchesFilter(DatabaseTableDataFilter[databaseName], tableName))
             {
                 return true;
             }
