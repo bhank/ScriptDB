@@ -17,6 +17,11 @@ Highlights of my version:
 
 The most significant change is the ability to run commands. This allows you to do things like scripting databases directly into source control with a single command.
 
+### Requirements
+ScriptDb requires SMO, SQL Management Objects. You can download this as part of the Microsoft SQL Server Feature Pack. To do the minimal install, go to [the download page][4] and download the files ENU\x64\SharedManagementObjects.msi and ENU\x64\SQLSysClrTypes.msi (substitute x86 if necessary). Install SQLSysClrTypes.msi first.
+
+### Examples
+
 Here's a simple command to script the schema of tables, views, and stored procedures into a single file for the Northwind database on localhost, using trusted auth:
 
     scriptdb.exe --database=Northwind --outputfile=Northwind.sql 
@@ -41,7 +46,7 @@ And here's a breakdown of what it's doing:
 * `--prescriptingcommand="cmd /c echo Scripting {database} at %TIME%"` - print the time before starting to script each database (not really necessary)
 * `--postscriptingcommand="SvnClient.exe completesync --message=\"Updating {database} on {server}\" \"{path}\{databaseclean}\" --verbose --trust-server-cert"` - commit changes (if any) to SVN after scripting each database, adding any new files and deleting any missing files
 
--Adam Coyne
+-Adam Coyne <github@mail2.coyne.nu>
 
 ```
 /*
@@ -77,3 +82,4 @@ And here's a breakdown of what it's doing:
 [1]: https://github.com/bhank/ScriptDB/releases
 [2]: http://scriptdb.codeplex.com/
 [3]: http://www.elsasoft.org
+[4]: https://www.microsoft.com/en-us/download/details.aspx?id=42295
