@@ -28,7 +28,7 @@ Here's a simple command to script the schema of tables, views, and stored proced
 
 Here's a really complicated command to use ScriptDB along with https://github.com/bhank/SVNCompleteSync to script all databases on a server to SVN:
 
-    scriptdb.exe --server=DBSERVER --username=SQLLOGIN --password=SQLPASSWORD --scriptalldatabases --outputdirectory=scripts\{serverclean} --purge --datatablefile=ScriptDataTables.txt --tableonefile --scriptdatabase  --startcommand="SvnClient.exe" checkoutupdate \"https://svnserver/svn/svnrepo/trunk/Databases/{serverclean}\" \"{path}\" --mkdir --message=\"Adding server {server}\" --cleanworkingcopy --verbose --trust-server-cert" --prescriptingcommand="cmd /c echo Scripting {database} at %TIME%" --postscriptingcommand="SvnClient.exe completesync --message=\"Updating {database} on {server}\" \"{path}\{databaseclean}\" --verbose --trust-server-cert"
+    scriptdb.exe --server=DBSERVER --username=SQLLOGIN --password=SQLPASSWORD --scriptalldatabases --outputdirectory=scripts\{serverclean} --purge --datatablefile=ScriptDataTables.txt --tableonefile --scriptdatabase  --startcommand="SvnClient.exe checkoutupdate \"https://svnserver/svn/svnrepo/trunk/Databases/{serverclean}\" \"{path}\" --mkdir --message=\"Adding server {server}\" --cleanworkingcopy --verbose --trust-server-cert" --prescriptingcommand="cmd /c echo Scripting {database} at %TIME%" --postscriptingcommand="SvnClient.exe completesync --message=\"Updating {database} on {server}\" \"{path}\{databaseclean}\" --verbose --trust-server-cert"
 
 And here's a breakdown of what it's doing:
 
@@ -42,7 +42,7 @@ And here's a breakdown of what it's doing:
 * `--datatablefile=ScriptDataTables.txt` - use this file to determine the tables in each database for which data should be scripted, rather than just schema. The lines of this file look like "DatabaseName:Table,OtherTable,WildcardTables*,YetAnotherTable"
 * `--tableonefile` - put indexes, triggers, etc. for a table all in the same file as the table itself, rather than in separate files
 * `--scriptdatabase` - script the database itself too -- but I don't think this works yet
-* `--startcommand="SvnClient.exe" checkoutupdate \"https://svnserver/svn/svnrepo/trunk/Databases/{serverclean}\" \"{path}\" --mkdir --message=\"Adding server {server}\" --cleanworkingcopy --verbose --trust-server-cert"` - on startup, ensure that a clean up-to-date working copy for the SVN URL for this SQL server exists in the output directory, creating it in SVN if necessary, checking it out if it isn't already checked out, reverting any changes, and updating it
+* `--startcommand="SvnClient.exe checkoutupdate \"https://svnserver/svn/svnrepo/trunk/Databases/{serverclean}\" \"{path}\" --mkdir --message=\"Adding server {server}\" --cleanworkingcopy --verbose --trust-server-cert"` - on startup, ensure that a clean up-to-date working copy for the SVN URL for this SQL server exists in the output directory, creating it in SVN if necessary, checking it out if it isn't already checked out, reverting any changes, and updating it
 * `--prescriptingcommand="cmd /c echo Scripting {database} at %TIME%"` - print the time before starting to script each database (not really necessary)
 * `--postscriptingcommand="SvnClient.exe completesync --message=\"Updating {database} on {server}\" \"{path}\{databaseclean}\" --verbose --trust-server-cert"` - commit changes (if any) to SVN after scripting each database, adding any new files and deleting any missing files
 
