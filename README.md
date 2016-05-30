@@ -28,7 +28,7 @@ Here's a simple command to script the schema of tables, views, and stored proced
 
 And a slightly more complicated command to script all databases on a server into a git repository (which you created first and set up a remote for) using trusted auth:
 
-	scriptdb.exe --server=DBSERVER --scriptalldatabases --outputdirectory=c:\repos\DbServerScripts --startcommand="git reset --hard \"{path}\"" --postscriptingcommand="cmd /c git add \"{path}\" && git commit -m \"Updating {database}\" \"{path}\"" --finishcommand="git -C \"{path}\" push" 
+	scriptdb.exe --server=DBSERVER --scriptalldatabases --outputdirectory=c:\repos\DbServerScripts --startcommand="git -C \"{path}\" reset --hard" --postscriptingcommand="cmd /c git -C \"{path}\" add . && git -C \"{path}\" commit -m \"Updating {database}\"" --finishcommand="git -C \"{path}\" push" 
 
 Here's a really complicated command to use ScriptDB along with https://github.com/bhank/SVNCompleteSync to script all databases on a server to SVN:
 
