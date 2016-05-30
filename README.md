@@ -26,6 +26,10 @@ Here's a simple command to script the schema of tables, views, and stored proced
 
     scriptdb.exe --database=Northwind --outputfile=Northwind.sql 
 
+And a slightly more complicated command to script all databases on a server into a git repository (which you created first and set up a remote for) using trusted auth:
+
+	scriptdb.exe --server=DBSERVER --scriptalldatabases --outputdirectory=c:\repos\DbServerScripts --startcommand="git reset --hard \"{path}\"" --postscriptingcommand="cmd /c git add \"{path}\" && git commit -m \"Updating {database}\" \"{path}\"" --finishcommand="git -C \"{path}\" push" 
+
 Here's a really complicated command to use ScriptDB along with https://github.com/bhank/SVNCompleteSync to script all databases on a server to SVN:
 
     scriptdb.exe --server=DBSERVER --username=SQLLOGIN --password=SQLPASSWORD --scriptalldatabases --outputdirectory=scripts\{serverclean} --purge --datatablefile=ScriptDataTables.txt --tableonefile --scriptdatabase  --startcommand="SvnClient.exe checkoutupdate \"https://svnserver/svn/svnrepo/trunk/Databases/{serverclean}\" \"{path}\" --mkdir --message=\"Adding server {server}\" --cleanworkingcopy --verbose --trust-server-cert" --prescriptingcommand="cmd /c echo Scripting {database} at %TIME%" --postscriptingcommand="SvnClient.exe completesync --message=\"Updating {database} on {server}\" \"{path}\{databaseclean}\" --verbose --trust-server-cert"
