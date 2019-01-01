@@ -185,6 +185,7 @@ namespace Elsasoft.ScriptDb
                 ScriptSchemas(verbose, db, so, databaseOutputDirectory);
                 ScriptDdlTriggers(verbose, db, so, databaseOutputDirectory);
                 //ScriptAssemblies(verbose, db, so, databaseOutputDirectory);
+                ScriptSynonyms(verbose, db, so, databaseOutputDirectory);
             }
         }
 
@@ -887,6 +888,34 @@ namespace Elsasoft.ScriptDb
                                 ScriptProperties(smo, sw);
                             }
                         }
+                    }
+                }
+            }
+        }
+
+        private void ScriptSynonyms(bool verbose, Database db, ScriptingOptions so, string outputDirectory)
+        {
+            var synonyms = Path.Combine(outputDirectory, "Synonyms");
+
+            foreach (Synonym smo in db.Synonyms)
+            {
+                if(!FilterExists() || MatchesFilter(FilterType.Synonym, smo.Name))
+                {
+                    using(StreamWriter sw = GetStreamWriter(Path.Combine(synonyms, FixUpFileName(smo.Name) + ".sql"), false))
+                    {
+                        if (verbose) Console.Error.WriteLine("[{0}]: [{1}]", db.Name, smo.Name);
+                        if (!CreateOnly)
+                        {
+                            so.ScriptDrops = so.IncludeIfNotExists = true;
+                            WriteScript(smo.Script(so), sw);
+                        }
+                        so.ScriptDrops = so.IncludeIfNotExists = false;
+                        WriteScript(smo.Script(so), sw);
+
+                        if (Properties)
+                        {
+                            ScriptProperties(smo, sw);
+                        }                        
                     }
                 }
             }
