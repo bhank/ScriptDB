@@ -17,9 +17,6 @@ Highlights of my version:
 
 The most significant change is the ability to run commands. This allows you to do things like scripting databases directly into source control with a single command.
 
-### Requirements
-ScriptDb requires SMO, SQL Management Objects. You can download this as part of the Microsoft SQL Server Feature Pack. To do the minimal install, go to [the download page][4] and download the files ENU\x64\SharedManagementObjects.msi and ENU\x64\SQLSysClrTypes.msi (substitute x86 if necessary). Install SQLSysClrTypes.msi first.
-
 ### Examples
 
 Here's a simple command to script the schema of tables, views, and stored procedures into a single file for the Northwind database on localhost, using trusted auth:
